@@ -17,6 +17,8 @@ logs
 .DS_Store
 .fleet
 .idea
+.llms.txt
+.llms-full.txt
 
 # Local env files
 .env

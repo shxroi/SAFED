@@ -1,4 +1,4 @@
-import type { User } from '../../shared/types/user';
+import type { User, UserForm } from '../../shared/types/user';
 
 export const useUsers = () => {
   const getUsers = async () => {
@@ -6,17 +6,17 @@ export const useUsers = () => {
   }
 
   const getUser = async (id: number) => {
-    return await $fetch<{ user: User }>(`/api/users/${id}`);
+    return await $fetch<{ user: User}>(`/api/users/${id}`);
   }
 
-  const createUser = async (userData: Omit<User, 'id' | 'status'>) => {
+  const createUser = async (userData: UserForm) => {
     return await $fetch<{ success: boolean; user: User }>('/api/users', {
       method: 'POST',
       body: userData
     })
   }
 
-  const updateUser = async (id: number, userData: Partial<User>) => {
+  const updateUser = async (id: number, userData: UserForm) => {
     return await $fetch<{ success: boolean; user: User }>(`/api/users/${id}`, {
       method: 'PUT',
       body: userData
