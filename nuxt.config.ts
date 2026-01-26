@@ -5,7 +5,8 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   srcDir: 'app/',
   css: ['~/assets/css/tailwind.css'],
-  modules: ['shadcn-nuxt', 'nuxt-auth-utils', '@nuxthub/core'],
+  modules: ['shadcn-nuxt', 'nuxt-auth-utils', // '@nuxt/test-utils',
+  '@nuxthub/core', '@nuxt/test-utils'],
   shadcn: {
     /**
      * Prefix for all the imported component.

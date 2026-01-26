@@ -1,4 +1,4 @@
-import { db } from '../../utils/db'
+import { db } from '../../utils/baseDb'
 import { users } from '../../db/schema'
 import { eq } from 'drizzle-orm'
 

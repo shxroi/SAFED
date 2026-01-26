@@ -4,6 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '.
 import { Button } from './ui/button';
 import type { User, UserForm } from '../../shared/types/user';
 import { Input } from './ui/input';
+import { Eye, EyeOff } from 'lucide-vue-next'; 
+
 
 interface Props {
   open: boolean
@@ -29,8 +31,10 @@ const form = ref <UserForm> ({
 
 const loading = ref(false)
 const error = ref('')
+const showPassword = ref(false)
 
 watch(() => props.user, (newUser) => {
+  showPassword.value = false
   if (newUser) {
     form.value = { 
       name: newUser.name,
@@ -43,6 +47,10 @@ watch(() => props.user, (newUser) => {
   } else { 
     form.value = { name: '', username: '', email: '', roles: undefined, password: '', isActive: false }
   }
+})
+
+watch(() => props.open, (val) => {
+  if (!val) showPassword.value = false
 })
 
 const isEditing = computed(() => !!props.user?.id)
@@ -95,11 +103,20 @@ const handleClose = () => {
           <div v-if="error" class="text-red-600 text-sm bg-red-50 p-2 rounded">{{ error }}</div>
           <div>
             <label class="block text-sm font-medium mb-1">Roles</label>
-              <select v-model="form.roles" class="w-full px-3 py-2 border rounded-md text-sm" required>
+              <!-- <select v-model="form.roles" class="w-full px-3 py-2 border rounded-md text-sm" required>
                 <option value="" disabled>Select a role</option>
                 <option value="OBSERVER">Observer</option>
                 <option value="STAFF">Staff</option>
-              </select>
+              </select> -->
+            <Select v-model="form.roles">
+              <SelectTrigger class="w-full rounded-md border-gray-300 focus:ring-gray-400">
+                <SelectValue placeholder="Select a role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="OBSERVER">Observer</SelectItem>
+                <SelectItem value="STAFF">Staff</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div class="block text-sm font-medium mb-1">
@@ -134,26 +151,28 @@ const handleClose = () => {
 
           <div>
             <label class="block text-sm font-medium mb-1">Password</label>
-            <Input
-            v-model="form.password"
-            type="password"
-            placeholder="********"
-            :required="!isEditing"
-            />
+            <div class="relative">
+              <Input
+                v-model="form.password"
+                :type="showPassword ? 'text' : 'password'"
+                placeholder="********"
+                :required="!isEditing"
+              />
+              <button
+                type="button"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                @click="showPassword = !showPassword"
+              >
+                <Eye v-if="showPassword" class="h-4 w-4" />
+                <EyeOff v-else class="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
-          <div class="flex gap-2 pt-4">
-            <Button type="submit" :disabled="loading">
-              {{ isEditing ? 'Update' : 'Create' }}
-              {{ loading ? (isEditing ? 'Updating...' : 'Creating...') : (isEditing ? 'Update User' : 'Create User') }}
+          <div class="flex justify-end gap-2 pt-4">
+            <Button variant="secondary" size="lg" type="submit" :disabled="loading">
+              {{ loading ? (isEditing ? 'Updating...' : 'Creating...') : (isEditing ? 'Save changes' : 'Register') }}
             </Button>
-            <!-- <button 
-              type="submit" 
-              :disabled="loading" 
-              class="bg-blue-600 text-white px-4 py-2 rounded disabled:bg-gray-400"
-            >
-              {{ loading ? 'Saving...' : (isEditing ? 'Update User' : 'Create User') }}
-            </button> -->
           </div>
         </form>     
       </div>

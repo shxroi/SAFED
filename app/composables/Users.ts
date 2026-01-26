@@ -23,6 +23,13 @@ export const useUsers = () => {
     })
   }
 
+  const updateStatus = async (id: number, isActive: boolean) => {
+    return await $fetch<{ success: boolean; user: User }>(`/api/users/${id}`, {
+      method: 'PUT',
+      body: { isActive }
+    })
+  }
+
   const deleteUser = async (id: number) => {
     return await $fetch<{ success: boolean, message: string }>(`/api/users/${id}`, {
       method: 'DELETE'
@@ -34,6 +41,7 @@ export const useUsers = () => {
     getUser,
     createUser,
     updateUser,
+    updateStatus,
     deleteUser
   }
 }

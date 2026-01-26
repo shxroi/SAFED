@@ -13,7 +13,7 @@ export interface User {
     roles: Role 
     isActive: boolean
 }
-
+    
 export interface UserForm {
     name: string, 
     username: string, 
