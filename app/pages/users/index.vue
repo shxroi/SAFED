@@ -19,7 +19,7 @@ const { updateStatus, deleteUser } = useUsers()
 
 // --- Constants ---
 const itemsPerPage = 10
-const roles = ['OBSERVER', 'STAFF']
+const roles = ['IM', 'OBSERVER', 'STAFF']
 
 // --- Helper functions to parse URL query ---
 const parseRolesFromQuery = (queryRoles: unknown): string[] => {

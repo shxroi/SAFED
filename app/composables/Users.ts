@@ -16,7 +16,7 @@ export const useUsers = () => {
     })
   }
 
-  const updateUser = async (id: number, userData: UserForm) => {
+  const updateUser = async (id: number, userData: Partial<UserForm>) => {
     return await $fetch<{ success: boolean; user: User }>(`/api/users/${id}`, {
       method: 'PUT',
       body: userData
@@ -31,7 +31,7 @@ export const useUsers = () => {
   }
 
   const deleteUser = async (id: number) => {
-    return await $fetch<{ success: boolean, message: string }>(`/api/users/${id}`, {
+    return await $fetch<{ success: boolean; message: string }>(`/api/users/${id}`, {
       method: 'DELETE'
     })  
   }

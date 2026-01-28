@@ -129,7 +129,7 @@ export default defineEventHandler(async (event) => {
 
   return {
     users: rows,
-    total: totalRes[0].value,
+    total: totalRes[0]?.value ?? 0,
     page,
     limit,
   }
