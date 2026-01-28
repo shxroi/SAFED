@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { LayoutDashboard, Users, Settings, LogOut, Menu } from 'lucide-vue-next'
+import { LayoutDashboard, Users, Settings, LogOut, Menu, Ship } from 'lucide-vue-next'
 import safedLogo from '@/assets/images/safed.png'
+import Avatar from '@/assets/images/avatar.png'
+
 
 
 const route = useRoute()
@@ -31,7 +33,15 @@ const user = {
           active-class="bg-slate-900 text-white shadow-sm"
         >
           <Users class="w-5 h-5" />
-          <span>Users</span>
+          <span>Users Management</span>
+        </NuxtLink>
+        <NuxtLink 
+          to="/operations" 
+          class="flex items-center gap-3 px-4 py-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-lg transition-all duration-200 group"
+          active-class="bg-slate-900 text-white shadow-sm"
+        >
+          <Ship class="w-5 h-5" />
+          <span>Manage Operations</span>
         </NuxtLink>
       </nav>
       <div class="p-4 border-t border-slate-100">
@@ -45,23 +55,29 @@ const user = {
     <!-- Main Content Area -->
     <div class="flex-1 flex flex-col">
       <!-- Top Header -->
-      <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-10">
+      <header class="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-4 md:px-8 sticky top-0 z-10 w-full">
         <div class="flex items-center gap-4">
-          <button class="md:hidden text-slate-600">
+          <button class="md:hidden text-slate-600 focus:outline-none">
             <Menu class="w-6 h-6"/>
           </button>
-          <div class="text-sm text-slate-400">Pages / <span class="text-slate-900">{{ currentPage }}</span></div>
+          <!-- Desktop Breadcrumb -->
+          <div class="hidden md:block text-sm text-slate-400">Pages / <span class="text-slate-900 font-medium">{{ currentPage }}</span></div>
         </div>
         
-        <div class="flex items-center gap-4">
-          <div class="text-right hidden sm:block">
-            <div class="text-sm font-semibold text-slate-900">{{ user.name }}</div>
-            <div class="text-xs text-slate-400">{{ user.email}}</div>
+        <!-- Mobile Centered Title -->
+        <h1 class="md:hidden text-lg font-bold text-slate-900 absolute translate-x-32">Manage user</h1>
+
+        <div class="flex items-center gap-3">
+          <div class="text-right hidden md:block">
+            <div class="text-sm font-bold text-slate-900 leading-none">{{ user.name }}</div>
+            <div class="text-[10px] text-slate-400 mt-1">{{ user.email }}</div>
           </div>
-          <img src="https://i.pravatar.cc/40" alt="User Avatar" class="w-10 h-10 rounded-full"/>
+          <!-- Profile Initial Badge -->
+          <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-200 flex items-center justify-center border-2 border-white shadow-sm font-bold text-slate-500 text-xs">
+             <img :src="Avatar" alt="User Avatar" class="w-full h-full object-cover" />
+          </div>
         </div>
       </header>
-
       <!-- Page Content -->
       <main>
         <slot />

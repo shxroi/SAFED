@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { toast } from 'vue-sonner'
 import { Button } from "@/components/ui/button"
+import { h } from 'vue'
 
 defineProps<{
   open: boolean
@@ -10,6 +12,12 @@ const emit = defineEmits([
   'update:open',
   'confirm'
 ])
+
+const handleConfirm = () => {
+  emit('confirm')
+  toast.error('User deleted successfully')
+}
+
 </script>
 
 <template>
@@ -26,7 +34,7 @@ const emit = defineEmits([
         <Button 
           variant="default" 
           class="w-full bg-[#0F172A] hover:bg-slate-800 text-white rounded-lg h-11"
-          @click="emit('confirm')"
+          @click="handleConfirm"
         >
           Yes
         </Button>
