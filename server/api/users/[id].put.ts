@@ -1,6 +1,6 @@
 import { db } from '../../utils/baseDb';
 import { users } from '../../db/schema';
-import { userUpdateSchema } from '../../../shared/types/schemas/userSchema';
+import { userUpdateSchema } from '../../../shared/schemas/userSchema';
 import { eq, and, ne } from 'drizzle-orm';
 
 export default defineEventHandler(async (event) => {
@@ -37,6 +37,25 @@ export default defineEventHandler(async (event) => {
 
     const validatedData = result.data
 
+    // --- Build update object (only include fields that are provided) ---
+    const updateData: any = {}
+    
+    if (validatedData.name !== undefined) updateData.name = validatedData.name
+    if (validatedData.email !== undefined) updateData.email = validatedData.email
+    if (validatedData.username !== undefined) updateData.username = validatedData.username
+    if (validatedData.roles !== undefined) updateData.roles = validatedData.roles
+    if (validatedData.password !== undefined) updateData.password = validatedData.password
+    if (validatedData.isActive !== undefined) updateData.isActive = validatedData.isActive
+
+    // --- Check if there's anything to update ---
+    if (Object.keys(updateData).length === 0) {
+      throw createError({
+        statusCode: 400,
+        message: 'No fields to update',
+        data: { general: 'Please provide at least one field to update' }
+      })
+    }
+
     // --- Check for duplicate email (exclude current user) ---
     if (validatedData.email) {
       const existingEmail = await db.select().from(users)
@@ -72,13 +91,6 @@ export default defineEventHandler(async (event) => {
         })
       }
     }
-
-    const updateData: any = {}
-    if (validatedData.name) updateData.name = validatedData.name
-    if (validatedData.email) updateData.email = validatedData.email
-    if (validatedData.username) updateData.username = validatedData.username
-    if (validatedData.roles) updateData.roles = validatedData.roles
-    if (validatedData.password) updateData.password = validatedData.password
 
     const [updatedUser] = await db.update(users)
       .set(updateData)

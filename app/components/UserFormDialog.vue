@@ -5,7 +5,8 @@ import { Button } from './ui/button';
 import type { User, UserForm } from '../../shared/types/user';
 import { Input } from './ui/input';
 import { Eye, EyeOff } from 'lucide-vue-next';
-import { userCreateSchema, userUpdateSchema } from '../../shared/types/schemas/userSchema';
+import { userCreateSchema, userUpdateSchema } from '../../shared/schemas/userSchema';
+import { toast } from 'vue-sonner'
 
 interface Props {
   open: boolean
@@ -162,6 +163,15 @@ const handleSubmit = async (): Promise<void> => {
     
     emit('update:open', false)
     emit('submit', submitData as any)
+    toast.success(`User ${isEditing.value ? 'updated' : 'created'} successfully`,
+      {
+        style: {
+          backgroundColor: '#ECFDF5', // green-50
+          color: '#166534',           // green-700
+          border: '1px solid #A7F3D0' // green-200
+        }
+      }
+    )
   } catch (err: any) {
     console.error('Form submission error:', err)
     

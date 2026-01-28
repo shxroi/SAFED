@@ -1,6 +1,6 @@
 import { db } from '../utils/baseDb';
 import { users } from '../db/schema';
-import { userCreateSchema } from '../../shared/types/schemas/userSchema';
+import { userCreateSchema } from '../../shared/schemas/userSchema';
 import { eq } from 'drizzle-orm';
 
 export default defineEventHandler(async (event) => {
