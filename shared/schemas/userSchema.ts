@@ -66,5 +66,13 @@ export const userUpdateSchema = z.object({
   isActive: z.boolean().optional(),
 }).strict()
 
+export const loginSchema = z.object({
+  username: z.string()
+    .min(1, 'Username is required'),
+  password: z.string()
+    .min(1, 'Password is required'),
+})
+
 export type UserCreate = z.infer<typeof userCreateSchema>
 export type UserUpdate = z.infer<typeof userUpdateSchema>
+export type LoginInput = z.infer<typeof loginSchema>
