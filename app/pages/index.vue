@@ -87,6 +87,19 @@ const handleSubmit = async () => {
         border: '1px solid #86efac' // green-200
       }
     })
+
+    const userRole = useAuth().user.value?.roles
+
+    if (userRole === 'IM') {
+      navigateTo('/users')
+    } else if (userRole === 'STAFF') {
+      navigateTo('/staff')
+    } else if (userRole === 'OBSERVER') {
+      navigateTo('/observer')
+    } else {
+      navigateTo('/')
+    }
+    
   } catch (err: unknown) {
     console.error('Login failed:', err)
     

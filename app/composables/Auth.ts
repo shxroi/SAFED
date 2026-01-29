@@ -2,31 +2,25 @@ import type { LoginInput } from '../../shared/schemas/userSchema'
 import type { User } from '../../shared/types/user'
 
 export const useAuth = () => {
-  const user = useState<User | null>('auth.user', () => null)
+  const { user: sessionUser, clear: clearSession, fetch: fetchSession } = useUserSession()
+  
+  // Maps the session user to our local state
+  const user = computed<User | null>(() => sessionUser.value as any)
   const loading = useState('auth.loading', () => false)
   const error = useState<string | null>('auth.error', () => null)
 
   // --- Login ---
-  const login = async (credentials: LoginInput) => {
+  const login = async (credentials: any) => {
     loading.value = true
-    error.value = null
-
     try {
-      const response = await $fetch<{ success: boolean; user: User }>('/api/auth/login', {
+      const res = await $fetch('/api/auth/login', {
         method: 'POST',
         body: credentials
       })
-
-      if (response.success) {
-        user.value = response.user
-        error.value = null
-        await navigateTo('/users')
-        return response
-      }
+      // This refreshes the session from the cookie set by the server
+      await fetchSession()
+      return res 
     } catch (err: any) {
-      console.error('Login error:', err)
-      const errorMessage = err.data?.data?.auth || err.data?.auth || err.message || 'Login failed'
-      error.value = errorMessage
       throw err
     } finally {
       loading.value = false
@@ -35,47 +29,11 @@ export const useAuth = () => {
 
   // --- Logout ---
   const logout = async () => {
-    loading.value = true
-    error.value = null
-
-    try {
-      await $fetch('/api/auth/logout', {
-        method: 'POST'
-      })
-
-      user.value = null
-      error.value = null
-      await navigateTo('/')
-    } catch (err: any) {
-      console.error('Logout error:', err)
-      const errorMessage = err.message || 'Logout failed'
-      error.value = errorMessage
-      throw err
-    } finally {
-      loading.value = false
-    }
+    await $fetch('/api/auth/logout', { method: 'POST' })
+    await clearSession()
+    navigateTo('/')
   }
 
-  // --- Fetch current user ---
-  const fetchUser = async () => {
-    try {
-      const response = await $fetch<{ user: User }>('/api/auth/me')
-      user.value = response.user
-      return response.user
-    } catch (err: any) {
-      console.error('Fetch user error:', err)
-      user.value = null
-      return null
-    }
-  }
-
-  // --- Check if user is authenticated ---
-  const isAuthenticated = computed(() => !!user.value)
-
-  // --- Check if user has specific role ---
-  const hasRole = (role: string) => {
-    return user.value?.roles === role
-  }
 
   return {
     user: readonly(user),
@@ -83,8 +41,6 @@ export const useAuth = () => {
     error: readonly(error),
     login,
     logout,
-    fetchUser,
-    isAuthenticated,
-    hasRole
+    loggedIn: computed(() => !!sessionUser.value)  
   }
 }
