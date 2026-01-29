@@ -1,16 +1,24 @@
 <script setup lang="ts">
 import { LayoutDashboard, Users, Settings, LogOut, Menu, Ship } from 'lucide-vue-next'
+import { Popover } from '@/components/ui/popover'
 import safedLogo from '@/assets/images/safed.png'
 import Avatar from '@/assets/images/avatar.png'
 
-
-
 const route = useRoute()
+const { user: authUser, logout } = useAuth()
 
 const currentPage = computed(() => {
   const name = route.name?.toString() || 'Dashboard'
   return name.charAt(0).toUpperCase() + name.slice(1)
 })
+
+const handleLogout = async () => {
+  try {
+    await logout()
+  } catch (error) {
+    console.error('Logout failed:', error)
+  }
+}
 
 const user = {
   name: 'Awang', 
@@ -45,7 +53,7 @@ const user = {
         </NuxtLink>
       </nav>
       <div class="p-4 border-t border-slate-100">
-        <button class="flex items-center gap-3 px-4 py-2 w-full text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+        <button @click="handleLogout" class="flex items-center gap-3 px-4 py-2 w-full text-red-500 hover:bg-red-50 rounded-lg transition-colors">
           <LogOut class="w-5 h-5" />
           <span>Logout</span>
         </button>
@@ -67,16 +75,28 @@ const user = {
         <!-- Mobile Centered Title -->
         <h1 class="md:hidden text-lg font-bold text-slate-900 absolute translate-x-32">Manage user</h1>
 
-        <div class="flex items-center gap-3">
-          <div class="text-right hidden md:block">
-            <div class="text-sm font-bold text-slate-900 leading-none">{{ user.name }}</div>
-            <div class="text-[10px] text-slate-400 mt-1">{{ user.email }}</div>
-          </div>
-          <!-- Profile Initial Badge -->
-          <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-200 flex items-center justify-center border-2 border-white shadow-sm font-bold text-slate-500 text-xs">
-             <img :src="Avatar" alt="User Avatar" class="w-full h-full object-cover" />
-          </div>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger as-child>
+            <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-200 flex items-center justify-center border-2 border-white shadow-sm cursor-pointer overflow-hidden hover:ring-slate-100n transtision-all">
+              <img :src="Avatar" alt="User Avatar" class="w-full h-full object-cover"/>
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" class="w-52 mt-2">
+            <DropdownMenuLabel>
+              <div class="flex flex-col space-y-1">
+                <p class="text-sm font-medium text-slate-900">{{ authUser.value?.name || user.name }}</p>
+                <p class="text-xs text-slate-500">{{ authUser.value?.email || user.email }}</p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem @click="handleLogout" class="text-red-600 focus:text-red-800 cursor-pointer">
+              <LogOut class="w-4 h-4 mr-2"/> 
+              <span>Log out</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+
       </header>
       <!-- Page Content -->
       <main>

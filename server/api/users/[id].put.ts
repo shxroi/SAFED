@@ -1,6 +1,8 @@
 import { db } from '../../utils/baseDb';
 import { users } from '../../db/schema';
 import { userUpdateSchema } from '../../../shared/schemas/userSchema';
+import { hashPassword } from '../../utils/password';
+import type { ZodIssue } from 'zod';
 import { eq, and, ne } from 'drizzle-orm';
 
 export default defineEventHandler(async (event) => {
@@ -22,16 +24,24 @@ export default defineEventHandler(async (event) => {
     const result = userUpdateSchema.safeParse(body)
 
     if (!result.success) {
-      const errors: Record<string, string> = {}
-      result.error.issues.forEach((issue: any) => {
+      const errors: Record<string, string[]> = {}
+      result.error.issues.forEach((issue: ZodIssue) => {
         const path = issue.path.join('.')
-        errors[path] = issue.message
+        if (!errors[path]) {
+          errors[path] = []
+        }
+        errors[path].push(issue.message)
+      })
+
+      const fieldErrors: Record<string, string> = {}
+      Object.entries(errors).forEach(([field, messages]) => {
+        fieldErrors[field] = messages[0] || 'Validation error'
       })
 
       throw createError({ 
         statusCode: 400, 
         message: 'Validation failed',
-        data: errors
+        data: fieldErrors
       })
     }
 
@@ -44,7 +54,12 @@ export default defineEventHandler(async (event) => {
     if (validatedData.email !== undefined) updateData.email = validatedData.email
     if (validatedData.username !== undefined) updateData.username = validatedData.username
     if (validatedData.roles !== undefined) updateData.roles = validatedData.roles
-    if (validatedData.password !== undefined) updateData.password = validatedData.password
+    
+    //  Hash password if provided
+    if (validatedData.password !== undefined) {
+      updateData.password = await hashPassword(validatedData.password)
+    }
+    
     if (validatedData.isActive !== undefined) updateData.isActive = validatedData.isActive
 
     // --- Check if there's anything to update ---
