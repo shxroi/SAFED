@@ -15,13 +15,7 @@ const emit = defineEmits([
 
 const handleConfirm = () => {
   emit('confirm')
-  toast.info('User deleted successfully', {
-    style: {
-      backgroundColor: '#fef2f2', // red-50
-      color: '#dc2626',           // red-600
-      border: '1px solid #fecaca' // red-200
-    }
-  })
+  toast.success('User deleted successfully')
 }
 
 </script>

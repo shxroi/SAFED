@@ -66,11 +66,6 @@ const handleSubmit = async () => {
 
   if (fieldErrors.value.username || fieldErrors.value.password) {
     toast.error('Please fill all fields', {
-      style: {
-        backgroundColor: '#fef2f2',
-        color: '#dc2626',
-        border: '1px solid #fecaca'
-      }
     }) 
     return
   } 
@@ -81,11 +76,6 @@ const handleSubmit = async () => {
       password: trimmedPassword 
     })
     toast.success('Login successful! Redirecting...', {
-      style: {
-        backgroundColor: '#f0fdf4', // green-50
-        color: '#16a34a',           // green-600
-        border: '1px solid #86efac' // green-200
-      }
     })
 
     const userRole = useAuth().user.value?.roles
@@ -106,11 +96,6 @@ const handleSubmit = async () => {
     const errorMsg = extractErrorMessage(err)
     
     toast.error(errorMsg, {
-      style: {
-        backgroundColor: '#fef2f2', // red-50
-        color: '#dc2626',           // red-600
-        border: '1px solid #fecaca' // red-200
-      }
     })
   }
 }

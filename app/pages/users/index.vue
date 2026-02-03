@@ -250,20 +250,20 @@ const activeFilterCount = computed(() => {
               </span>
             </Button>
           </PopoverTrigger>
-          <PopoverContent class="w-64 p-4 shadow-md rounded-lg" align="end" :side-offset="8">
+          <PopoverContent class="w-64 p-4 shadow-md rounded-lg" :side-offset="8">
             <div class="space-y-4">
               <div> 
                 <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Roles</h4>
                 <div class="space-y-2">
-                  <div v-for="role in roles" :key="role" class="flex items-center space-x-2">
+                  <div v-for="role in roles" :key="role" class="flex justify-between items-center space-x-2">
+                    <label :for="role" class="text-sm font-medium leading-none cursor-pointer">
+                      {{ role }}  
+                    </label>
                     <Checkbox 
                       :id="role"
                       :checked="selectedRoles.includes(role)"
                       @click="toggleRole(role, !selectedRoles.includes(role))"
                     />
-                    <label :for="role" class="text-sm font-medium leading-none cursor-pointer">
-                      {{ role }}  
-                    </label>
                   </div>
                 </div>
               </div>

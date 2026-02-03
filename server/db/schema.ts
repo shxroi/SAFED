@@ -12,3 +12,8 @@ export const users = pgTable('users', {
   isActive: boolean('isactive').notNull().default(true),
   createdAt: timestamp('createdat').notNull().defaultNow(),
 });
+
+export const tools = pgTable('tools', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length:100 }).notNull(),
+});

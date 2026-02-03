@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { LayoutDashboard, Users, Settings, LogOut, Menu, Ship } from 'lucide-vue-next'
+import { LayoutDashboard, Users, ToolCase, LogOut, Menu, Ship } from 'lucide-vue-next'
 import { Popover } from '@/components/ui/popover'
 import safedLogo from '@/assets/images/safed.png'
 import Avatar from '@/assets/images/avatar.png'
@@ -20,10 +20,6 @@ const handleLogout = async () => {
   }
 }
 
-const user = {
-  name: 'Awang', 
-  email: 'awang@safed.id' 
-}
 </script>
 
 <template>
@@ -42,6 +38,14 @@ const user = {
         >
           <Users class="w-5 h-5" />
           <span>Users Management</span>
+        </NuxtLink>
+        <NuxtLink 
+          to="/tools" 
+          class="flex items-center gap-3 px-4 py-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-lg transition-all duration-200 group"
+          active-class="bg-slate-900 text-white shadow-sm"
+        >
+          <ToolCase class="w-5 h-5" />
+          <span>Tools Management</span>
         </NuxtLink>
         <NuxtLink 
           to="/operations" 
@@ -84,8 +88,8 @@ const user = {
           <DropdownMenuContent align="end" class="w-52 mt-2">
             <DropdownMenuLabel>
               <div class="flex flex-col space-y-1">
-                <p class="text-sm font-medium text-slate-900">{{ authUser.value?.name || user.name }}</p>
-                <p class="text-xs text-slate-500">{{ authUser.value?.email || user.email }}</p>
+                <p class="text-sm font-medium text-slate-900">{{ authUser?.name }}</p>
+                <p class="text-xs text-slate-500">{{ authUser?.email }}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -95,8 +99,6 @@ const user = {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-
-
       </header>
       <!-- Page Content -->
       <main>

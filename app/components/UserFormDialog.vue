@@ -7,6 +7,7 @@ import { Input } from './ui/input';
 import { Eye, EyeOff } from 'lucide-vue-next';
 import { userCreateSchema, userUpdateSchema } from '../../shared/schemas/userSchema';
 import { toast } from 'vue-sonner'
+import { Select, SelectItem, SelectTrigger, SelectContent, SelectGroup, SelectLabel, SelectValue } from './ui/select';
 
 interface Props {
   open: boolean
@@ -163,15 +164,7 @@ const handleSubmit = async (): Promise<void> => {
     
     emit('update:open', false)
     emit('submit', submitData as any)
-    toast.success(`User ${isEditing.value ? 'updated' : 'created'} successfully`,
-      {
-        style: {
-          backgroundColor: '#ECFDF5', // green-50
-          color: '#166534',           // green-700
-          border: '1px solid #A7F3D0' // green-200
-        }
-      }
-    )
+    toast.success(`User ${isEditing.value ? 'updated' : 'created'} successfully`)
   } catch (err: any) {
     console.error('Form submission error:', err)
     
@@ -219,6 +212,31 @@ const handleClose = (): void => {
             <label for="roles" class="block text-sm font-medium mb-1">
               Role <span class="text-red-500">*</span>
             </label>
+            <Select>
+              <SelectTrigger class="w-full">
+                <SelectValue placeholder="Select a fruit" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Fruits</SelectLabel>
+                  <SelectItem value="apple">
+                    Apple
+                  </SelectItem>
+                  <SelectItem value="banana">
+                    Banana
+                  </SelectItem>
+                  <SelectItem value="blueberry">
+                    Blueberry
+                  </SelectItem>
+                  <SelectItem value="grapes">
+                    Grapes
+                  </SelectItem>
+                  <SelectItem value="pineapple">
+                    Pineapple
+                  </SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
             <select 
               id="roles"
               v-model="form.roles"
@@ -234,6 +252,7 @@ const handleClose = (): void => {
               <option value="OBSERVER">Observer</option>
               <option value="STAFF">Staff</option>
             </select>
+            
             <p v-if="getFieldError('roles')" class="text-red-500 text-xs mt-1">
               {{ getFieldError('roles') }}
             </p>
@@ -297,7 +316,7 @@ const handleClose = (): void => {
           </div>
 
           <!-- Password Input -->
-          <div v-if="!isEditing || form.password">
+          <div>
             <label for="password" class="block text-sm font-medium mb-1">
               Password 
               <span v-if="!isEditing" class="text-red-500">*</span>
