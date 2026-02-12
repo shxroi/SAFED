@@ -176,12 +176,12 @@ watch(currentPage, (newPage, oldPage) => {
 })
 
 // Reset temporary selections when Popover opens
-watch(filterPopoverOpen, (isOpen) => {
-  if (isOpen) {
-    selectedRoles.value = [...activeRoles.value]
-    selectedStatuses.value = [...activeStatuses.value]
-  }
-})
+// watch(filterPopoverOpen, (isOpen) => {
+//   if (isOpen) {
+//     selectedRoles.value = [...activeRoles.value]
+//     selectedStatuses.value = [...activeStatuses.value]
+//   }
+// })
 
 // --- Data Actions ---
 const handleToggleStatus = async (user: User) => {
@@ -231,7 +231,7 @@ const activeFilterCount = computed(() => {
           <Input 
             v-model="searchQuery"
             placeholder="Search" 
-            class="pl-10 rounded-md border-gray-300 focus-visible:ring-gray-400"
+            class="pl-10 rounded-md bg-white border-gray-300 focus-visible:ring-gray-400"
           />
         </div>
 
@@ -263,6 +263,7 @@ const activeFilterCount = computed(() => {
                       :id="role"
                       :checked="selectedRoles.includes(role)"
                       @click="toggleRole(role, !selectedRoles.includes(role))"
+                      @update:checked="(val: boolean) => toggleRole(role, val)"
                     />
                   </div>
                 </div>
@@ -273,21 +274,23 @@ const activeFilterCount = computed(() => {
               <div>
                 <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Status</h4>
                 <div class="space-y-2">
-                  <div class="flex items-center space-x-2">
+                  <div class="flex justify-between items-center space-x-2">
+                    <label for="active" class="text-sm font-medium leading-none cursor-pointer ">Active</label>
                     <Checkbox
                       id="active"
                       :checked="selectedStatuses.includes(true)"
                       @click="toggleStatus(true, !selectedStatuses.includes(true))"
+                      @update:checked="(val: boolean) => toggleStatus(true, val)"
                     />
-                    <label for="active" class="text-sm font-medium leading-none cursor-pointer">Active</label>
                   </div>
-                  <div class="flex items-center space-x-2">
+                  <div class="flex justify-between items-center space-x-2">
+                    <label for="inactive" class="text-sm font-medium leading-none cursor-pointer">Inactive</label>
                     <Checkbox 
                       id="inactive"
                       :checked="selectedStatuses.includes(false)"
                       @click="toggleStatus(false, !selectedStatuses.includes(false))"
+                      @update:checked="(val: boolean) => toggleStatus(false, val)"
                     />
-                    <label for="inactive" class="text-sm font-medium leading-none cursor-pointer">Inactive</label>
                   </div>
                 </div>
               </div>
@@ -317,7 +320,7 @@ const activeFilterCount = computed(() => {
           @click="() => { selectedUser = undefined; dialogOpen = true }" 
           class="rounded-md px-6 hover:bg-gray-500 text-white font-medium"
         >
-          + new
+          + New
         </Button>
       </div>
     </div>
@@ -325,7 +328,7 @@ const activeFilterCount = computed(() => {
     <div v-if="pending">Loading...</div>
     <div v-else-if="error">Error: {{ error.message }}</div>
     <div v-else>
-      <Table class="shadow-md rounded-md">
+      <Table class="shadow-md bg-white rounded-md">
         <TableCaption>List of Users</TableCaption>
         <TableHeader>
           <TableRow>

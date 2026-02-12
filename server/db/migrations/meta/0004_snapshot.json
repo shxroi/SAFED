@@ -1,0 +1,292 @@
+{
+  "id": "e618ac29-0640-4bf7-ba04-1bc656d593f8",
+  "prevId": "d3cabae8-7797-4ec1-a480-96e6184280fe",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.operations": {
+      "name": "operations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "company": {
+          "name": "company",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "operationtype",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vesselname": {
+          "name": "vesselname",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "location": {
+          "name": "location",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "operationstatus",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'Draft'"
+        },
+        "createdat": {
+          "name": "createdat",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.operationsenroll": {
+      "name": "operationsenroll",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userid": {
+          "name": "userid",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "operationid": {
+          "name": "operationid",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "operationrole": {
+          "name": "operationrole",
+          "type": "operationrole",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "operationsenroll_userid_users_id_fk": {
+          "name": "operationsenroll_userid_users_id_fk",
+          "tableFrom": "operationsenroll",
+          "tableTo": "users",
+          "columnsFrom": [
+            "userid"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "operationsenroll_operationid_operations_id_fk": {
+          "name": "operationsenroll_operationid_operations_id_fk",
+          "tableFrom": "operationsenroll",
+          "tableTo": "operations",
+          "columnsFrom": [
+            "operationid"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.tools": {
+      "name": "tools",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "username": {
+          "name": "username",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password": {
+          "name": "password",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "roles": {
+          "name": "roles",
+          "type": "userroles",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "isactive": {
+          "name": "isactive",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "createdat": {
+          "name": "createdat",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "users_username_unique": {
+          "name": "users_username_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "username"
+          ]
+        },
+        "users_email_unique": {
+          "name": "users_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.operationrole": {
+      "name": "operationrole",
+      "schema": "public",
+      "values": [
+        "SUPERVISOR",
+        "STAFF"
+      ]
+    },
+    "public.operationstatus": {
+      "name": "operationstatus",
+      "schema": "public",
+      "values": [
+        "Draft",
+        "Active",
+        "Complete",
+        "Cancelled"
+      ]
+    },
+    "public.operationtype": {
+      "name": "operationtype",
+      "schema": "public",
+      "values": [
+        "Upgrade",
+        "Installation",
+        "Maintenance",
+        "SAT/Commissioning",
+        "Uninstall"
+      ]
+    },
+    "public.userroles": {
+      "name": "userroles",
+      "schema": "public",
+      "values": [
+        "IM",
+        "OBSERVER",
+        "STAFF"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

@@ -4,6 +4,7 @@ import { toast } from 'vue-sonner'
 import { Search, Plus, MoreVertical, Pencil, Trash2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import DeleteConfirmDialog from '@/components/DeleteConfimDialog.vue'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table'
@@ -156,17 +157,28 @@ const handleSubmit = async () => {
   }
 }
 
-const handleDelete = async (id: number) => {
-  if (!confirm('Are you sure you want to delete this tool?')) return
+const isDeleteDialogOpen = ref(false)
+const toolToDelete = ref<number | null>(null)
 
+const openDeleteDialog = (id: number) => {
+  toolToDelete.value = id
+  isDeleteDialogOpen.value = true
+}
+
+const confirmDelete = async () => {
+  if (!toolToDelete.value) return
+  
   try {
-    await $fetch(`/api/tools/${id}`, {
+    await $fetch(`/api/tools/${toolToDelete.value}`, {
       method: 'DELETE',
     })
     toast.success('Tool deleted successfully')
     await refresh()
   } catch (error: any) {
     toast.error(error?.data?.message || 'Failed to delete tool')
+  } finally {
+    isDeleteDialogOpen.value = false
+    toolToDelete.value = null
   }
 }
 
@@ -186,7 +198,7 @@ const handleDelete = async (id: number) => {
           <Input 
             v-model="searchQuery"
             placeholder="Search" 
-            class="pl-10 rounded-md border-gray-300 focus-visible:ring-gray-400"
+            class="pl-10 rounded-md bg-white border-gray-300 focus-visible:ring-gray-400"
           />
         </div>
         
@@ -195,7 +207,7 @@ const handleDelete = async (id: number) => {
           @click="openDialog()" 
           class="rounded-md px-6 hover:bg-gray-500 text-white font-medium"
         >
-          + new
+          + New
         </Button>
       </div>
     </div>
@@ -203,7 +215,7 @@ const handleDelete = async (id: number) => {
     <div v-if="pending">Loading...</div>
     <div v-else-if="error">Error: {{ error.message }}</div>
     <div v-else>
-      <Table class="shadow-md rounded-md">
+      <Table class="shadow-md bg-white rounded-md">
         <TableCaption>List of Tools</TableCaption>
         <TableHeader>
           <TableRow>
@@ -233,7 +245,7 @@ const handleDelete = async (id: number) => {
                     <Pencil class="w-4 h-4 mr-2" />
                     Edit
                   </DropdownMenuItem>
-                  <DropdownMenuItem @click="handleDelete(tool.id)" class="text-red-600 cursor-pointer">
+                  <DropdownMenuItem @click="openDeleteDialog(tool.id)" class="text-red-600 cursor-pointer">
                     <Trash2 class="w-4 h-4 mr-2" />
                     Delete
                   </DropdownMenuItem>
@@ -243,6 +255,13 @@ const handleDelete = async (id: number) => {
           </TableRow>
         </TableBody>
       </Table>
+
+      <DeleteConfirmDialog
+        v-model:open="isDeleteDialogOpen"
+        title="Delete Tool?"
+        description="This tool will be permanently deleted. This action cannot be undone."
+        @confirm="confirmDelete"
+      />
 
       <Pagination
         v-model:page="currentPage"

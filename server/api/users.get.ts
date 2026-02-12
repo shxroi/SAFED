@@ -1,5 +1,5 @@
-import { db } from '../../server/utils/baseDb'
-import { users } from '../../server/db/schema'
+import { db } from '../utils/baseDb'
+import { users } from '../db/schema'
 import { and, ilike, or, inArray, count, desc } from 'drizzle-orm'
 
 // Helper: Normalize roles from query (handles both string and array)

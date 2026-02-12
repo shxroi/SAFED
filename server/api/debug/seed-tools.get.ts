@@ -13,7 +13,6 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // 2. Dummy tools data (20 common workshop/maritime tools)
     const dummyTools = [
       { name: 'Tang Potong' },
       { name: 'Tang Kombinasi' },

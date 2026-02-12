@@ -1,11 +1,13 @@
 <script lang="ts" setup>
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { toast } from 'vue-sonner'
 import { Button } from "@/components/ui/button"
-import { h } from 'vue'
+import { toast } from "vue-sonner";
 
-defineProps<{
+const props = defineProps<{
   open: boolean
+  title?: string
+  description?: string
+  entityName?: string // e.g., "User", "Tool", "Operation"
 }>()
 
 const emit = defineEmits([
@@ -15,18 +17,23 @@ const emit = defineEmits([
 
 const handleConfirm = () => {
   emit('confirm')
-  toast.success('User deleted successfully')
 }
 
+const displayTitle = computed(() => props.title || 'Are you sure?')
+const displayDescription = computed(() => 
+  props.description || 'This action cannot be undone.'
+)
 </script>
 
 <template>
   <Dialog :open="open" @update:open="emit('update:open', $event)">
-    <DialogContent class="w-[320px] h-[221px] rounded-2xl p-6">
+    <DialogContent class="w-auto h-auto rounded-2xl p-6">
       <DialogHeader class="items-center text-center">
-        <DialogTitle class="text-xl font-bold text-slate-900">Are you sure?</DialogTitle>
+        <DialogTitle class="text-xl font-bold text-slate-900">
+          {{ displayTitle }}
+        </DialogTitle>
         <DialogDescription class="text-slate-400 mt-2">
-          This action cannot be undone.
+          {{ displayDescription }}
         </DialogDescription>
       </DialogHeader>
       

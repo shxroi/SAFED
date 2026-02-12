@@ -1,0 +1,82 @@
+import { db } from '../../utils/baseDb'
+import { operations } from '../../db/schema'
+import { eq } from 'drizzle-orm'
+
+export default defineEventHandler(async (event) => {
+  try {
+    const idParam = getRouterParam(event, 'id')
+    const body = await readBody(event)
+    const { status } = body
+
+    if (!idParam) {
+      throw createError({
+        statusCode: 400,
+        message: 'Operation ID is required',
+      })
+    }
+
+    const id = parseInt(idParam, 10)
+    if (Number.isNaN(id)) {
+      throw createError({
+        statusCode: 400,
+        message: 'Invalid Operation ID',
+      })
+    }
+
+    if (!status) {
+      throw createError({
+        statusCode: 400,
+        message: 'Status is required',
+      })
+    }
+
+    const validStatuses = ['Draft', 'Active', 'Complete', 'Cancelled']
+    if (!validStatuses.includes(status)) {
+      throw createError({
+        statusCode: 400,
+        message: 'Invalid status value',
+      })
+    }
+
+    // Check if operation exists
+    const [operation] = await db
+      .select()
+      .from(operations)
+      .where(eq(operations.id, id))
+
+    if (!operation) {
+      throw createError({
+        statusCode: 404,
+        message: 'Operation not found',
+      })
+    }
+
+    // Validate status transitions
+    if (status === 'Cancelled' && (operation.status === 'Complete' || operation.status === 'Cancelled')) {
+      throw createError({
+        statusCode: 400,
+        message: 'Cannot cancel a completed or already cancelled operation',
+      })
+    }
+
+    // Update status
+    const [updatedOperation] = await db
+      .update(operations)
+      .set({ status })
+      .where(eq(operations.id, id))
+      .returning()
+
+    return {
+      success: true,
+      operation: updatedOperation,
+      message: `Operation ${status.toLowerCase()} successfully`,
+    }
+  } catch (error: any) {
+    if (error.statusCode) throw error
+    console.error('Error updating operation status:', error)
+    throw createError({
+      statusCode: 500,
+      message: error.message || 'Failed to update operation status',
+    })
+  }
+})

@@ -207,51 +207,35 @@ const handleClose = (): void => {
             {{ generalError }}
           </div>
 
-          <!-- Roles Select -->
           <div>
             <label for="roles" class="block text-sm font-medium mb-1">
               Role <span class="text-red-500">*</span>
             </label>
-            <Select>
-              <SelectTrigger class="w-full">
-                <SelectValue placeholder="Select a fruit" />
+            
+            <Select 
+              v-model="form.roles" 
+              @update:model-value="validateField('roles')"
+            >
+              <SelectTrigger 
+                :class="[
+                  'w-full',
+                  hasFieldError('roles') ? 'border-red-500 focus:ring-red-500' : ''
+                ]"
+              >
+                <SelectValue placeholder="Select a role" />
               </SelectTrigger>
               <SelectContent>
-                <SelectGroup>
-                  <SelectLabel>Fruits</SelectLabel>
-                  <SelectItem value="apple">
-                    Apple
-                  </SelectItem>
-                  <SelectItem value="banana">
-                    Banana
-                  </SelectItem>
-                  <SelectItem value="blueberry">
-                    Blueberry
-                  </SelectItem>
-                  <SelectItem value="grapes">
-                    Grapes
-                  </SelectItem>
-                  <SelectItem value="pineapple">
-                    Pineapple
-                  </SelectItem>
-                </SelectGroup>
+                <SelectItem value="IM">
+                  Implementation Manager
+                </SelectItem>
+                <SelectItem value="OBSERVER">
+                  Observer
+                </SelectItem>
+                <SelectItem value="STAFF">
+                  Staff
+                </SelectItem>
               </SelectContent>
             </Select>
-            <select 
-              id="roles"
-              v-model="form.roles"
-              @blur="validateField('roles')"
-              @change="validateField('roles')"
-              :class="[
-                'w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors',
-                hasFieldError('roles') ? 'border-red-500 focus:ring-red-500' : ''
-              ]"
-            >
-              <option value="">Select a role</option>
-              <option value="IM">Implementation Manager</option>
-              <option value="OBSERVER">Observer</option>
-              <option value="STAFF">Staff</option>
-            </select>
             
             <p v-if="getFieldError('roles')" class="text-red-500 text-xs mt-1">
               {{ getFieldError('roles') }}

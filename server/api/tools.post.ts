@@ -1,7 +1,6 @@
 import { db } from '../utils/baseDb'
 import { tools } from '../db/schema'
 import { z } from 'zod'
-import { th } from 'zod/v4/locales'
 
 const toolCreateSchema = z.object({
   name: z.string().min(1, 'Tool name is required').max(50, 'Tool name must be at most 50 characters long'),
