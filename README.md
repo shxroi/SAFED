@@ -1,4 +1,4 @@
-# SAFED - Safety Supervision System
+# SAFED - System Automation for Field
 
 SAFED is a comprehensive safety supervision application built with **Nuxt 4**, designed to manage operations, safety checklists, staff assignments, and reporting.
 
