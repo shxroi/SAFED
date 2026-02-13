@@ -642,7 +642,8 @@ const formatDate = (date: Date | null) => {
                 <div class="space-y-2">
                   <Label class="text-sm font-medium text-gray-900">Section</Label>
                   <Input 
-                    v-model="sectionsList[selectedSection]?.name" 
+                    :model-value="selectedSection !== null ? sectionsList[selectedSection].name : ''" 
+                    @update:model-value="val => { if (selectedSection !== null) sectionsList[selectedSection].name = val }"
                     placeholder="Section name"
                     class="bg-gray-50 border-gray-200"
                   />

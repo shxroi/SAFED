@@ -1,22 +1,22 @@
 <script lang="ts" setup>
 import { ref, computed } from 'vue'
-import { Search, Plus, Calendar, MapPin, Users, MoreVertical, Eye, Pencil, Trash2, Filter, Building2 } from 'lucide-vue-next'
+import { Search, Plus, Calendar, MapPin, Users, MoreVertical, Eye, Pencil, Trash2, Filter, Building2, UserCheck } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 import type { Operation } from '../../../shared/types/operation'
 
 const { user } = useAuth()
 const userRole = computed(() => user.value?.roles)
 
-// Check if user is IM (can create/edit/delete operations)
 const isIM = computed(() => userRole.value === 'IM')
 
 const router = useRouter()
 const searchQuery = ref('')
+const showMyOperationsOnly = ref(false)
 
 // Fetch operations with search
 const { data: operationsData, pending, error, refresh } = await useFetch('/api/operations', {
@@ -26,11 +26,20 @@ const { data: operationsData, pending, error, refresh } = await useFetch('/api/o
   watch: [searchQuery],
 })
 
-const operations = computed(() => operationsData.value?.operations || [])
+// Filter operations based on "My Operations" toggle
+const operations = computed(() => {
+  let ops = operationsData.value?.operations || []
+  
+  if (showMyOperationsOnly.value) {
+    ops = ops.filter(op => op.isEnrolled)
+  }
+  
+  return ops
+})
 
 // FIX: Compute status counts once instead of filtering repeatedly in template
 const statusCounts = computed(() => {
-  const ops = operations.value
+  const ops = operationsData.value?.operations || []
   return {
     total: ops.length,
     active: ops.filter(op => op.status === 'Active').length,
@@ -128,7 +137,7 @@ const mutateOperation = async (
 
 // Actions
 const handleView = (operation: Operation) => {
-  router.push(`/operations/${operation.id}`)
+  router.push(`/operations/${operation.id}/execute`)
 }
 
 const handleEdit = (operation: Operation) => {
@@ -177,10 +186,23 @@ const handleNewOperation = () => {
         </div>
 
         <!-- Filter Button -->
-        <Button variant="outline" class="gap-2">
-          <Filter class="h-4 w-4" />
-          Filter
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger as-child>
+            <Button variant="outline" class="gap-2">
+              <Filter class="h-4 w-4" />
+              Filter
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Filter Operations</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuCheckboxItem 
+              v-model:checked="showMyOperationsOnly"
+            >
+              My Operations Only
+            </DropdownMenuCheckboxItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         
         <!-- New Operation Button - Only for IM -->
         <Button v-if="isIM" @click="handleNewOperation" class="gap-2">
@@ -241,17 +263,20 @@ const handleNewOperation = () => {
       <Card 
         v-for="operation in operations" 
         :key="operation.id" 
-        class="hover:shadow-lg transition-shadow"
+        class="hover:shadow-lg transition-shadow cursor-pointer relative group"
+        @click="handleView(operation)"
       >
         <CardHeader class="pb-4">
           <!-- Title and Menu -->
           <div class="flex justify-between items-start mb-3">
-            <CardTitle class="text-lg font-semibold pr-2">
+            <CardTitle class="text-lg font-semibold pr-2 line-clamp-1">
               {{ getOperationTitle(operation) }}
             </CardTitle>
-            <DropdownMenu>
-              <DropdownMenuTrigger as-child>
-                <Button variant="ghost" size="icon" class="h-8 w-8 flex-shrink-0">
+            
+            <!-- Context Menu (Only for IM) -->
+            <DropdownMenu v-if="isIM">
+              <DropdownMenuTrigger as-child @click.stop>
+                <Button variant="ghost" size="icon" class="h-8 w-8 flex-shrink-0 -mr-2">
                   <MoreVertical class="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -261,7 +286,7 @@ const handleNewOperation = () => {
                   View Details
                 </DropdownMenuItem>
                 <DropdownMenuItem 
-                  v-if="isIM && operation.status === 'Draft'" 
+                  v-if="operation.status === 'Draft'" 
                   @click="handleEdit(operation)" 
                   class="cursor-pointer"
                 >
@@ -269,7 +294,7 @@ const handleNewOperation = () => {
                   Edit
                 </DropdownMenuItem>
                 <DropdownMenuItem 
-                  v-if="isIM && operation.status !== 'Complete' && operation.status !== 'Cancelled'" 
+                  v-if="operation.status !== 'Complete' && operation.status !== 'Cancelled'" 
                   @click="handleCancel(operation)" 
                   class="text-orange-600 cursor-pointer"
                 >
@@ -277,7 +302,7 @@ const handleNewOperation = () => {
                   Cancel Operation
                 </DropdownMenuItem>
                 <DropdownMenuItem 
-                  v-if="isIM && operation.status === 'Draft'" 
+                  v-if="operation.status === 'Draft'" 
                   @click="handleDelete(operation)" 
                   class="text-red-600 cursor-pointer"
                 >
@@ -295,6 +320,14 @@ const handleNewOperation = () => {
             </Badge>
             <Badge :class="getStatusColor(operation.status)" class="text-xs font-medium px-3 py-1">
               {{ operation.status }}
+            </Badge>
+            <!-- Enrolled Badge -->
+            <Badge 
+              v-if="operation.isEnrolled" 
+              class="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 text-xs font-medium px-2 py-1 flex items-center gap-1"
+            >
+              <UserCheck class="h-3 w-3" />
+              Assigned
             </Badge>
           </div>
         </CardHeader>
@@ -353,6 +386,13 @@ const handleNewOperation = () => {
     <!-- Empty State -->
     <div v-if="!pending && !error && operations.length === 0" class="text-center py-12">
       <p class="text-gray-500">No operations found</p>
+      <Button 
+        v-if="showMyOperationsOnly" 
+        variant="link" 
+        @click="showMyOperationsOnly = false"
+      >
+        Show all operations
+      </Button>
     </div>
   </div>
 </template>

@@ -4,8 +4,13 @@ import { eq, ilike, or, desc, sql } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   try {
+    const session = await getUserSession(event)
     const query = getQuery(event)
     const searchQuery = query.search as string | undefined
+
+    // Check user role to determine if we need to filter by enrollment
+    const userRole = session?.user?.roles
+    const userId = session?.user?.id
 
     // Build base query
     let whereConditions = []
@@ -21,21 +26,49 @@ export default defineEventHandler(async (event) => {
       )
     }
 
-    // FIX: Use sql`` for column names that might be snake_case in DB
-    const operationsList = await db
-      .select({
-        id: operations.id,
-        company: operations.company,
-        type: operations.type,
-        vesselName: operations.vesselName,
-        location: operations.location,
-        date: operations.date,
-        status: operations.status,
-        createdAt: operations.createdAt,
-      })
-      .from(operations)
-      .where(whereConditions.length > 0 ? or(...whereConditions) : undefined)
-      .orderBy(desc(operations.createdAt))
+    let operationsList
+
+    // If user is Staff/Supervisor, only show operations they're enrolled in
+    if (userRole && ['STAFF', 'SUPERVISOR'].includes(userRole) && userId) {
+      // Get operations through enrollment join
+      const enrolledOps = await db
+        .select({
+          id: operations.id,
+          company: operations.company,
+          type: operations.type,
+          vesselName: operations.vesselName,
+          location: operations.location,
+          date: operations.date,
+          status: operations.status,
+          createdAt: operations.createdAt,
+        })
+        .from(operations)
+        .innerJoin(operationsEnroll, eq(operationsEnroll.operationId, operations.id))
+        .where(
+          whereConditions.length > 0
+            ? or(eq(operationsEnroll.userId, userId), ...whereConditions)
+            : eq(operationsEnroll.userId, userId)
+        )
+        .orderBy(desc(operations.createdAt))
+
+      operationsList = enrolledOps
+    } else {
+      // IM/Observer can see all operations
+      operationsList = await db
+        .select({
+          id: operations.id,
+          company: operations.company,
+          type: operations.type,
+          vesselName: operations.vesselName,
+          location: operations.location,
+          date: operations.date,
+          status: operations.status,
+          createdAt: operations.createdAt,
+        })
+        .from(operations)
+        .where(whereConditions.length > 0 ? or(...whereConditions) : undefined)
+        .orderBy(desc(operations.createdAt))
+    }
 
     // Handle empty results
     if (!operationsList || operationsList.length === 0) {

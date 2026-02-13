@@ -1,9 +1,18 @@
 import { db } from '../../../utils/baseDb'
-import { operationTools, jobsection, operationJobLists, tools as toolsSchema } from '../../../db/schema'
-import { eq, inArray } from 'drizzle-orm'
+import { operationTools, jobsection, operationJobLists, tools as toolsSchema, operationsEnroll } from '../../../db/schema'
+import { eq, inArray, and } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   try {
+    const session = await getUserSession(event)
+
+    if (!session?.user?.id) {
+      throw createError({
+        statusCode: 401,
+        message: 'Unauthorized',
+      })
+    }
+
     const idParam = getRouterParam(event, 'id')
     const body = await readBody(event)
 
@@ -15,6 +24,38 @@ export default defineEventHandler(async (event) => {
     }
 
     const operationId = parseInt(idParam, 10)
+
+    // Authorization Check
+    // 1. IM can always edit
+    const isIM = session.user.roles === 'IM'
+
+    // 2. Supervisors can edit their own operations
+    let isSupervisor = false
+    if (!isIM) {
+      const [enrollment] = await db
+        .select()
+        .from(operationsEnroll)
+        .where(
+          and(
+            eq(operationsEnroll.operationId, operationId),
+            eq(operationsEnroll.userId, Number(session.user.id)),
+            eq(operationsEnroll.operationRole, 'SUPERVISOR')
+          )
+        )
+        .limit(1)
+
+      if (enrollment) {
+        isSupervisor = true
+      }
+    }
+
+    if (!isIM && !isSupervisor) {
+      throw createError({
+        statusCode: 403,
+        message: 'Only IM or Supervisors can modify the checklist',
+      })
+    }
+
     const { tools, sections } = body
 
     await db.transaction(async (tx) => {
@@ -140,6 +181,7 @@ export default defineEventHandler(async (event) => {
       message: 'Checklist saved successfully',
     }
   } catch (error: any) {
+    if (error.statusCode) throw error
     console.error('Error saving checklist:', error)
     throw createError({
       statusCode: 500,

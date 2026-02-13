@@ -1,5 +1,5 @@
 import { db } from '../../../utils/baseDb'
-import { operationTools, jobsection, operationJobLists, tools as toolsSchema } from '../../../db/schema'
+import { operationTools, jobsection, operationJobLists, tools as toolsSchema, users } from '../../../db/schema'
 import { eq } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
@@ -15,13 +15,17 @@ export default defineEventHandler(async (event) => {
 
     const operationId = parseInt(idParam, 10)
 
-    // Fetch tools with their names from the tools table
+    // Fetch tools with their names and status from the tools table
     const tools = await db
       .select({
         id: operationTools.id,
         operationId: operationTools.operationId,
         toolId: operationTools.toolId,
         quantity: operationTools.quantity,
+        preStatus: operationTools.preStatus,
+        postStatus: operationTools.postStatus,
+        preNote: operationTools.preNote,
+        postNote: operationTools.postNote,
         name: toolsSchema.name, // Get name from joined tools table
       })
       .from(operationTools)
@@ -34,11 +38,20 @@ export default defineEventHandler(async (event) => {
       .from(jobsection)
       .where(eq(jobsection.operationId, operationId))
 
-    // Fetch all activities
-    // Optimization: we could filter by operationId if joblist has it (it effectively does via jobsection, but schema has operationId too)
+    // Fetch all activities with executor details
     const activities = await db
-      .select()
+      .select({
+        id: operationJobLists.id,
+        operationId: operationJobLists.operationId,
+        jobsectionId: operationJobLists.jobsectionId,
+        jobDescription: operationJobLists.jobDescription,
+        status: operationJobLists.status,
+        notes: operationJobLists.notes,
+        executedBy: operationJobLists.executedBy,
+        executedByName: users.name,
+      })
       .from(operationJobLists)
+      .leftJoin(users, eq(operationJobLists.executedBy, users.id))
       .where(eq(operationJobLists.operationId, operationId))
 
     // Build hierarchical structure
@@ -55,7 +68,9 @@ export default defineEventHandler(async (event) => {
               id: activity.id,
               jobDescription: activity.jobDescription,
               documentationRequired: false, // Schema doesn't have this?, defaulting
-              status: activity.status,
+              status: activity.status || null,
+              notes: activity.notes || null,
+              executedByName: activity.executedByName || null,
             })),
         },
       ],
@@ -64,9 +79,14 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       tools: tools.map(tool => ({
-        id: tool.toolId, // Valid for frontend to maybe track, or just use index
+        id: tool.id,
+        toolId: tool.toolId,
         name: tool.name || 'Unknown Tool',
         quantity: tool.quantity,
+        preStatus: tool.preStatus,
+        postStatus: tool.postStatus,
+        preNote: tool.preNote,
+        postNote: tool.postNote,
       })),
       sections: formattedSections,
     }

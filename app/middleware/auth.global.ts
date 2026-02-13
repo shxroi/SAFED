@@ -7,7 +7,7 @@ export default defineNuxtRouteMiddleware((to, from) => {
 
     if (loggedIn.value && to.path === '/') {
         const role = user.value?.roles
-        if (role === "STAFF") return navigateTo('/staff')
+        if (role === "STAFF") return navigateTo('/operation')
         if (role === "OBSERVER") return navigateTo('/observer')
         return navigateTo('/users')
     }

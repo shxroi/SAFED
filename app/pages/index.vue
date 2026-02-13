@@ -83,7 +83,7 @@ const handleSubmit = async () => {
     if (userRole === 'IM') {
       navigateTo('/users')
     } else if (userRole === 'STAFF') {
-      navigateTo('/staff')
+      navigateTo('/operations')
     } else if (userRole === 'OBSERVER') {
       navigateTo('/observer')
     } else {
