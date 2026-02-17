@@ -2,25 +2,31 @@ import { db } from '../utils/baseDb'
 import { users } from '../db/schema'
 import { and, ilike, or, inArray, count, desc } from 'drizzle-orm'
 
+type UserRole = 'IM' | 'OBSERVER' | 'STAFF'
+const USER_ROLES: UserRole[] = ['IM', 'OBSERVER', 'STAFF']
+
 // Helper: Normalize roles from query (handles both string and array)
-const normalizeRoles = (rawRoles: unknown): string[] => {
+const normalizeRoles = (rawRoles: unknown): UserRole[] => {
   if (!rawRoles) return []
 
-  if (typeof rawRoles === 'string') {
-    return rawRoles
-      .split(',')
+  const parseValues = (values: string[]): UserRole[] => {
+    return values
       .map((r) => r.trim())
-      .filter((r) => r.length > 0)
+      .filter((r): r is UserRole => USER_ROLES.includes(r as UserRole))
+  }
+
+  if (typeof rawRoles === 'string') {
+    return parseValues(rawRoles.split(','))
   }
 
   if (Array.isArray(rawRoles)) {
-    return rawRoles
+    return parseValues(rawRoles
       .flatMap((value) =>
         typeof value === 'string'
           ? value.split(',').map((r) => r.trim())
           : []
       )
-      .filter((r) => r.length > 0)
+    )
   }
 
   return []
@@ -47,15 +53,17 @@ const normalizeStatuses = (rawStatus: unknown): boolean[] => {
 }
 
 export default defineEventHandler(async (event) => {
-  const query = getQuery(event)
+  const session = await getUserSession(event)
+  const sessionUser = session?.user as { id?: number | string; roles?: string } | undefined
 
-  // Debug logging - TEMPORARY
-  console.log('=== BACKEND DEBUG ===')
-  console.log('Raw query object:', query)
-  console.log('query.roles type:', typeof query.roles)
-  console.log('query.roles value:', query.roles)
-  console.log('query.status type:', typeof query.status)
-  console.log('query.status value:', query.status)
+  if (!sessionUser?.id) {
+    throw createError({ statusCode: 401, message: 'Unauthorized' })
+  }
+  if (sessionUser.roles !== 'IM') {
+    throw createError({ statusCode: 403, message: 'Forbidden' })
+  }
+
+  const query = getQuery(event)
 
   // --- Pagination with clamping ---
   const rawPage = parseInt(query.page as string)
@@ -80,11 +88,6 @@ export default defineEventHandler(async (event) => {
   const roles = normalizeRoles(query.roles)
   const statuses = normalizeStatuses(query.status)
 
-  // Debug logging - TEMPORARY
-  console.log('Parsed roles:', roles)
-  console.log('Parsed statuses:', statuses)
-  console.log('=== END DEBUG ===')
-
   // --- Build conditions ---
   const conditions = []
 
@@ -99,18 +102,14 @@ export default defineEventHandler(async (event) => {
   }
 
   if (roles.length > 0) {
-    console.log('Applying roles filter with:', roles)
-    conditions.push(inArray(users.roles, roles as any))
+    conditions.push(inArray(users.roles, roles))
   }
 
   if (statuses.length > 0) {
-    console.log('Applying statuses filter with:', statuses)
     conditions.push(inArray(users.isActive, statuses))
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
-
-  console.log('Final conditions count:', conditions.length)
 
   // --- Execute queries ---
   const [rows, totalRes] = await Promise.all([

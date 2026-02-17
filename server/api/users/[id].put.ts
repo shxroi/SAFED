@@ -7,6 +7,16 @@ import { eq, and, ne } from 'drizzle-orm';
 
 export default defineEventHandler(async (event) => {
   try {
+    const session = await getUserSession(event)
+    const sessionUser = session?.user as { id?: number | string; roles?: string } | undefined
+
+    if (!sessionUser?.id) {
+      throw createError({ statusCode: 401, message: 'Unauthorized' })
+    }
+    if (sessionUser.roles !== 'IM') {
+      throw createError({ statusCode: 403, message: 'Forbidden' })
+    }
+
     const id = getRouterParam(event, 'id')
     const body = await readBody(event)
 
@@ -19,6 +29,9 @@ export default defineEventHandler(async (event) => {
     }
 
     const userId = parseInt(id)
+    if (Number.isNaN(userId) || userId < 1) {
+      throw createError({ statusCode: 400, message: 'Invalid user ID' })
+    }
 
     // --- Validate with Zod ---
     const result = userUpdateSchema.safeParse(body)
@@ -118,9 +131,11 @@ export default defineEventHandler(async (event) => {
       user: updatedUser 
     }
   } catch (error: any) {
+    if (error.statusCode) throw error
+
     console.error('Update Error:', error)
     throw createError({
-      statusCode: error.statusCode || 500,
+      statusCode: 500,
       message: error.message || 'Failed to update user',
       data: error.data
     })

@@ -8,6 +8,16 @@ const toolCreateSchema = z.object({
 
 export default defineEventHandler(async (event) => {
   try { 
+    const session = await getUserSession(event)
+    const sessionUser = session?.user as { id?: number | string; roles?: string } | undefined
+
+    if (!sessionUser?.id) {
+      throw createError({ statusCode: 401, message: 'Unauthorized' })
+    }
+    if (sessionUser.roles !== 'IM') {
+      throw createError({ statusCode: 403, message: 'Forbidden' })
+    }
+
     const body = await readBody(event)
     const result = toolCreateSchema.safeParse(body)
 

@@ -5,7 +5,7 @@ import { Button } from './ui/button';
 import type { User, UserForm } from '../../shared/types/user';
 import { Input } from './ui/input';
 import { Eye, EyeOff } from 'lucide-vue-next';
-import { userCreateSchema, userUpdateSchema } from '../../shared/schemas/userSchema';
+import { userCreateSchema, userUpdateSchema } from '@/schemas/userSchema';
 import { toast } from 'vue-sonner'
 import { Select, SelectItem, SelectTrigger, SelectContent, SelectGroup, SelectLabel, SelectValue } from './ui/select';
 

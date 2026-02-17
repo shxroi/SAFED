@@ -9,12 +9,22 @@ const toolSchema = z.object({
 
 export default defineEventHandler(async (event) => {
   try {
-    const id = parseInt(getRouterParam(event, 'id')!)
+    const session = await getUserSession(event)
+    const sessionUser = session?.user as { id?: number | string; roles?: string } | undefined
+
+    if (!sessionUser?.id) {
+      throw createError({ statusCode: 401, message: 'Unauthorized' })
+    }
+    if (sessionUser.roles !== 'IM') {
+      throw createError({ statusCode: 403, message: 'Forbidden' })
+    }
+
+    const id = Number(getRouterParam(event, 'id'))
     const body = await readBody(event)
     const result = toolSchema.safeParse(body)
 
-    if (!id) {
-      throw createError({ statusCode: 400, message: 'Tool ID is required' })
+    if (Number.isNaN(id) || id < 1) {
+      throw createError({ statusCode: 400, message: 'Invalid tool ID' })
     }
 
     if (!body) {
@@ -41,8 +51,10 @@ export default defineEventHandler(async (event) => {
 
     return { success: true, data: updated }
   } catch (error: any) {
+    if (error.statusCode) throw error
+
     throw createError({
-      statusCode: error.statusCode || 500,
+      statusCode: 500,
       message: error.message || 'Internal Server Error'
     })
   }
