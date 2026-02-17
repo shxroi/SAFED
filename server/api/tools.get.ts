@@ -3,6 +3,16 @@ import { tools } from '../db/schema'
 import { and, ilike, or, asc } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) =>{
+  const session = await getUserSession(event)
+  const sessionUser = session?.user as { id?: number | string; roles?: string } | undefined
+
+  if (!sessionUser?.id) {
+    throw createError({ statusCode: 401, message: 'Unauthorized' })
+  }
+  if (sessionUser.roles !== 'IM') {
+    throw createError({ statusCode: 403, message: 'Forbidden' })
+  }
+
   const query = getQuery(event)
 
   const rawPage = parseInt(query.page as string)
@@ -33,8 +43,6 @@ export default defineEventHandler(async (event) =>{
   }
   
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
-  
-  console.log('Final conditions count:', conditions.length)
 
   const [rows, totalRes] = await Promise.all([
     db
