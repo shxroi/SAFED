@@ -19,12 +19,12 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 403, message: 'Forbidden' })
     }
 
-    const id = parseInt(getRouterParam(event, 'id')!)
+    const id = Number(getRouterParam(event, 'id'))
     const body = await readBody(event)
     const result = toolSchema.safeParse(body)
 
-    if (!id) {
-      throw createError({ statusCode: 400, message: 'Tool ID is required' })
+    if (Number.isNaN(id) || id < 1) {
+      throw createError({ statusCode: 400, message: 'Invalid tool ID' })
     }
 
     if (!body) {
@@ -51,8 +51,10 @@ export default defineEventHandler(async (event) => {
 
     return { success: true, data: updated }
   } catch (error: any) {
+    if (error.statusCode) throw error
+
     throw createError({
-      statusCode: error.statusCode || 500,
+      statusCode: 500,
       message: error.message || 'Internal Server Error'
     })
   }

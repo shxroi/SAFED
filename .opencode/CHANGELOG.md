@@ -12,3 +12,4 @@
 - Verified changes with:
   - `npm run test` (pass)
   - `npm run build` (pass; warnings remain for duplicated auto-import symbols)
+- Follow-up PR review improvement: aligned `tools/[id].put` ID validation to return `400 Invalid tool ID` for NaN/non-positive values and rethrow known H3 errors before wrapping unknowns as 500.
