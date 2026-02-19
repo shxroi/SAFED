@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.15",
+    "@nuxt/image": "^2.0.0",
     "@nuxthub/core": "^0.10.5",
     "@tanstack/vue-table": "^8.21.3",
     "@vee-validate/zod": "^4.15.1",

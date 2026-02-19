@@ -19,6 +19,7 @@ logs
 .idea
 .llms.txt
 .llms-full.txt
+.AGENTS.md
 
 # Local env files
 .env
@@ -31,3 +32,6 @@ logs
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# Runtime uploads
+public/uploads/

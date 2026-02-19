@@ -1,103 +1,127 @@
+import { eq } from 'drizzle-orm'
 import { db } from '../../utils/baseDb'
 import { operations, operationsEnroll } from '../../db/schema'
-import { eq } from 'drizzle-orm'
+import { OPERATION_TYPES } from '../../../shared/types/operation'
+
+type SessionUser = {
+  id?: number | string
+  roles?: string
+}
+
+type OperationPayload = {
+  company?: string
+  type?: string
+  vesselName?: string | null
+  location?: string
+  date?: string
+  status?: 'Draft' | 'Active'
+  supervisorId?: number | string | null
+  staffIds?: Array<number | string>
+}
+
+const normalizeId = (value: number | string | null | undefined): number | null => {
+  if (value === null || value === undefined || value === '') return null
+
+  const parsed = Number(value)
+  if (Number.isNaN(parsed) || parsed < 1) return null
+
+  return parsed
+}
 
 export default defineEventHandler(async (event) => {
   try {
+    const session = await getUserSession(event)
+    const sessionUser = session?.user as SessionUser | undefined
+
+    if (!sessionUser?.id) {
+      throw createError({ statusCode: 401, message: 'Unauthorized' })
+    }
+
+    if (sessionUser.roles !== 'IM') {
+      throw createError({ statusCode: 403, message: 'Forbidden' })
+    }
+
     const idParam = getRouterParam(event, 'id')
-    const body = await readBody(event)
-    const { company, type, vesselName, location, date, supervisorId, staffIds } = body
-
     if (!idParam) {
-      throw createError({
-        statusCode: 400,
-        message: 'Operation ID is required',
-      })
+      throw createError({ statusCode: 400, message: 'Operation ID is required' })
     }
 
-    const id = parseInt(idParam, 10)
-    if (Number.isNaN(id)) {
-      throw createError({
-        statusCode: 400,
-        message: 'Invalid Operation ID',
-      })
+    const id = Number(idParam)
+    if (Number.isNaN(id) || id < 1) {
+      throw createError({ statusCode: 400, message: 'Invalid operation ID' })
     }
 
-    // Validate required fields
-    if (!company || !type || !location || !date) {
+    const body = (await readBody(event)) as OperationPayload
+    const company = body.company?.trim()
+    const type = body.type?.trim()
+    const location = body.location?.trim()
+    const dateInput = body.date
+
+    if (!company || !type || !location || !dateInput) {
       throw createError({
         statusCode: 400,
         message: 'Missing required fields: company, type, location, and date are required',
       })
     }
 
-    const parsedDate = new Date(date)
-    if (Number.isNaN(parsedDate.getTime())) {
-      throw createError({
-        statusCode: 400,
-        message: 'Invalid date',
-      })
+    if (!OPERATION_TYPES.includes(type as any)) {
+      throw createError({ statusCode: 400, message: 'Invalid operation type' })
     }
 
+    const parsedDate = new Date(dateInput)
+    if (Number.isNaN(parsedDate.getTime())) {
+      throw createError({ statusCode: 400, message: 'Invalid date' })
+    }
+
+    const status = body.status === 'Active' ? 'Active' : 'Draft'
+    const supervisorId = normalizeId(body.supervisorId)
+    const staffIds = Array.isArray(body.staffIds)
+      ? [...new Set(body.staffIds.map((staffId) => normalizeId(staffId)).filter((staffId): staffId is number => staffId !== null))]
+      : []
+
+    const filteredStaffIds = supervisorId ? staffIds.filter((staffId) => staffId !== supervisorId) : staffIds
+
     const updatedOperation = await db.transaction(async (tx) => {
-      const [existingOp] = await tx
+      const [existingOperation] = await tx
         .select()
         .from(operations)
         .where(eq(operations.id, id))
 
-      if (!existingOp) {
-        throw createError({
-          statusCode: 404,
-          message: 'Operation not found',
-        })
+      if (!existingOperation) {
+        throw createError({ statusCode: 404, message: 'Operation not found' })
       }
 
-      if (existingOp.status !== 'Draft') {
-        throw createError({
-          statusCode: 400,
-          message: 'Only draft operations can be edited',
-        })
+      if (existingOperation.status !== 'Draft') {
+        throw createError({ statusCode: 400, message: 'Only draft operations can be edited' })
       }
 
       const [updated] = await tx
         .update(operations)
         .set({
           company,
-          type,
-          vesselName: vesselName || null,
+          type: type as any,
+          vesselName: body.vesselName?.trim() || null,
           location,
           date: parsedDate,
+          status,
         })
         .where(eq(operations.id, id))
         .returning()
 
       if (!updated) {
-        throw createError({
-          statusCode: 500,
-          message: 'Failed to update operation',
-        })
+        throw createError({ statusCode: 500, message: 'Failed to update operation' })
       }
 
       await tx.delete(operationsEnroll).where(eq(operationsEnroll.operationId, id))
 
-      const enrollments = []
+      const enrollments: Array<{ operationId: number; userId: number; operationRole: 'SUPERVISOR' | 'STAFF' }> = []
 
       if (supervisorId) {
-        enrollments.push({
-          operationId: updated.id,
-          userId: parseInt(supervisorId),
-          operationRole: 'SUPERVISOR' as const,
-        })
+        enrollments.push({ operationId: id, userId: supervisorId, operationRole: 'SUPERVISOR' })
       }
 
-      if (staffIds && Array.isArray(staffIds) && staffIds.length > 0) {
-        staffIds.forEach((staffId: number) => {
-          enrollments.push({
-            operationId: updated.id,
-            userId: parseInt(staffId),
-            operationRole: 'STAFF' as const,
-          })
-        })
+      for (const staffId of filteredStaffIds) {
+        enrollments.push({ operationId: id, userId: staffId, operationRole: 'STAFF' })
       }
 
       if (enrollments.length > 0) {
@@ -114,6 +138,7 @@ export default defineEventHandler(async (event) => {
     }
   } catch (error: any) {
     if (error.statusCode) throw error
+
     console.error('Error updating operation:', error)
     throw createError({
       statusCode: 500,

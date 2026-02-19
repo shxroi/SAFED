@@ -4,6 +4,17 @@ import { eq } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   try {
+    const session = await getUserSession(event)
+    const sessionUser = session?.user as { id?: number | string; roles?: string } | undefined
+
+    if (!sessionUser?.id) {
+      throw createError({ statusCode: 401, message: 'Unauthorized' })
+    }
+
+    if (sessionUser.roles !== 'IM') {
+      throw createError({ statusCode: 403, message: 'Forbidden' })
+    }
+
     const idParam = getRouterParam(event, 'id')
     const body = await readBody(event)
     const { status } = body
@@ -51,11 +62,17 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Validate status transitions
-    if (status === 'Cancelled' && (operation.status === 'Complete' || operation.status === 'Cancelled')) {
+    const allowedTransitions: Record<string, string[]> = {
+      Draft: ['Active', 'Cancelled'],
+      Active: ['Complete', 'Cancelled'],
+      Complete: [],
+      Cancelled: [],
+    }
+
+    if (!allowedTransitions[operation.status]?.includes(status)) {
       throw createError({
         statusCode: 400,
-        message: 'Cannot cancel a completed or already cancelled operation',
+        message: `Invalid status transition from ${operation.status} to ${status}`,
       })
     }
 
