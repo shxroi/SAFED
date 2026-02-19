@@ -37,8 +37,7 @@ const emit = defineEmits<{
   save: [];
 }>();
 
-const cameraInputId = computed(() => `doc-camera-${props.activity.id}`);
-const galleryInputId = computed(() => `doc-gallery-${props.activity.id}`);
+const uploadInputId = computed(() => `doc-upload-${props.activity.id}`);
 
 const formatFileSize = (bytes: number): string => {
   if (bytes < 1024) return `${bytes} B`;
@@ -113,7 +112,15 @@ const onFilesPicked = (event: Event): void => {
       Documentation Required
     </Badge>
 
-    <div v-if="props.editable" class="mb-3 space-y-3">
+    <Textarea
+      v-if="props.editable"
+      :model-value="props.activity.notes || ''"
+      placeholder="Type activity note"
+      class="mb-4 bg-gray-50"
+      @update:model-value="emit('update-notes', String($event || ''))"
+    />
+
+    <div v-if="props.editable" class="mb-4 space-y-3">
       <div class="flex items-center justify-between">
         <span
           v-if="!props.activity.documentationRequired"
@@ -125,58 +132,26 @@ const onFilesPicked = (event: Event): void => {
         >
       </div>
 
-      <div class="flex flex-wrap items-center gap-2">
-        <label :for="cameraInputId" class="inline-flex">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            :disabled="props.isUploading || props.remainingSlots === 0"
-            class="gap-2"
-          >
-            <ImagePlus class="h-4 w-4" />
-            Camera
-          </Button>
-        </label>
-        <input
-          :id="cameraInputId"
-          type="file"
-          accept="image/*"
-          capture="environment"
-          class="hidden"
-          @change="onFilesPicked"
-        />
-
-        <label :for="galleryInputId" class="inline-flex">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            :disabled="props.isUploading || props.remainingSlots === 0"
-            class="gap-2"
-          >
-            <ImagePlus class="h-4 w-4" />
-            Gallery
-          </Button>
-        </label>
-        <input
-          :id="galleryInputId"
-          type="file"
-          accept="image/*"
-          multiple
-          class="hidden"
-          @change="onFilesPicked"
-        />
-      </div>
+      <label :for="uploadInputId" class="block">
+        <Button
+          type="button"
+          variant="outline"
+          :disabled="props.isUploading || props.remainingSlots === 0"
+          class="w-full gap-2"
+        >
+          <ImagePlus class="h-4 w-4" />
+          Upload documentation
+        </Button>
+      </label>
+      <input
+        :id="uploadInputId"
+        type="file"
+        accept="image/*"
+        multiple
+        class="hidden"
+        @change="onFilesPicked"
+      />
     </div>
-
-    <Textarea
-      v-if="props.editable"
-      :model-value="props.activity.notes || ''"
-      placeholder="Type activity note"
-      class="mb-4 bg-gray-50"
-      @update:model-value="emit('update-notes', String($event || ''))"
-    />
 
     <div v-if="props.visibleDocs.length > 0" class="mb-4">
       <p class="mb-2 text-xs font-medium text-gray-500">Uploaded Photos</p>

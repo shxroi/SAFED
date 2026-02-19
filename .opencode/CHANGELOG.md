@@ -221,3 +221,13 @@
 - Verification:
   - `npm run test` (pass)
   - `npm run build` (pass)
+
+## 2026-02-19 (Upload documentation trigger UX)
+
+- Updated upload UX in `app/components/operation/checklist/OperationActivityCard.vue`:
+  - replaced separate Camera/Gallery controls with one `Upload documentation` button below notes
+  - button now opens a single file picker (`accept="image/*"`) so mobile users can choose camera capture or gallery from OS chooser
+  - kept multi-file selection support and existing max-photo guard behavior
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass)

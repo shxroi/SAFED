@@ -3,7 +3,6 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import {
   ArrowLeft,
   Building2,
-  Calendar,
   ChevronDown,
   Download,
   MapPin,
@@ -24,56 +23,28 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import type {
-  OperationStatus,
-  OperationType,
-} from "../../../../shared/types/operation";
 import type { OperationActivity } from "../../../../shared/types/operation-execution";
 import OperationActivityCard from "~/components/operation/checklist/OperationActivityCard.vue";
+import OperationSectionsChecklist from "~/components/operation/checklist/OperationSectionsChecklist.vue";
 import ToolsChecklistPanel from "~/components/operation/checklist/ToolsChecklistPanel.vue";
+import OperationInfoCard from "~/components/operation/OperationInfoCard.vue";
 import { useOperationAccess } from "~/composables/operation/useOperationAccess";
 import { useExecutionDocumentation } from "~/composables/operation/useExecutionDocumentation";
 import { useOperationDetail } from "~/composables/operation/useOperationDetail";
+import { useOperationFormatters } from "~/composables/operation/useOperationFormatters";
 import { useOperationProgress } from "~/composables/operation/useOperationProgress";
+import { useOperationSave } from "~/composables/operation/useOperationSave";
 
 const MAX_DOCS_PER_TASK = 2;
 
 const route = useRoute();
 const { user } = useUserSession();
-
-const getErrorMessage = (error: unknown, fallbackMessage: string): string => {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "data" in error &&
-    typeof (error as { data?: { message?: unknown } }).data?.message ===
-      "string"
-  ) {
-    return (error as { data: { message: string } }).data.message;
-  }
-
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "message" in error &&
-    typeof (error as { message?: unknown }).message === "string"
-  ) {
-    return (error as { message: string }).message;
-  }
-
-  return fallbackMessage;
-};
 
 const operationId = computed(() => Number(route.params.id));
 
@@ -84,14 +55,12 @@ const { canAccess, isReadOnly, isSupervisor } = useOperationAccess(
   user,
 );
 const { progress: calculateProgress } = useOperationProgress(tools, sections);
+const { formatDate, getDaysLeft } = useOperationFormatters();
 
-const saving = ref(false);
-const finishing = ref(false);
 const showFinishDialog = ref(false);
 const activeTab = ref<"tools" | "operation">("tools");
 const monitorTab = ref<"tools" | "operation">("operation");
 const selectedSectionId = ref<number | null>(null);
-const uploadingByTask = ref<Record<number, boolean>>({});
 
 const {
   previewOpen,
@@ -113,6 +82,30 @@ const {
   addPendingDocumentation,
 } = useExecutionDocumentation(MAX_DOCS_PER_TASK);
 
+const {
+  saving,
+  finishing,
+  uploadingByTask,
+  isTaskUploading,
+  setToolCondition,
+  updateToolNote,
+  setActivityStatus,
+  saveTools,
+  saveActivity,
+  finishOperation,
+} = useOperationSave({
+  operationId,
+  tools,
+  sections,
+  isReadOnly,
+  pendingDocumentationByTask,
+  deletedDocumentationByTask,
+  undoDocumentationDelete,
+  removePendingDocumentation,
+  clearTaskDocumentationDraft,
+  fetchOperationDetail,
+});
+
 const selectedSection = computed(() => {
   return sections.value.find(
     (section) => section.id === selectedSectionId.value,
@@ -133,206 +126,6 @@ onBeforeUnmount(() => {
   clearAllDocumentationDrafts();
 });
 
-const setToolCondition = (
-  toolIndex: number,
-  type: "pre" | "post",
-  status: "Good" | "Not Good",
-) => {
-  if (isReadOnly.value) return;
-
-  const tool = tools.value[toolIndex];
-  if (!tool) return;
-
-  if (type === "pre") {
-    tool.preStatus = status;
-    return;
-  }
-
-  tool.postStatus = status;
-};
-
-const updateToolNote = (
-  toolIndex: number,
-  type: "pre" | "post",
-  value: string,
-) => {
-  if (isReadOnly.value) return;
-
-  const tool = tools.value[toolIndex];
-  if (!tool) return;
-
-  if (type === "pre") {
-    tool.preNote = value;
-    return;
-  }
-
-  tool.postNote = value;
-};
-
-const setActivityStatus = (
-  sectionIndex: number,
-  moduleIndex: number,
-  activityIndex: number,
-  status: "Good" | "Not Good",
-) => {
-  if (isReadOnly.value) return;
-
-  const section = sections.value[sectionIndex];
-  const module = section?.modules[moduleIndex];
-  const activity = module?.activities[activityIndex];
-
-  if (activity) {
-    activity.status = status;
-  }
-};
-
-const saveTools = async (): Promise<void> => {
-  if (
-    isReadOnly.value ||
-    Number.isNaN(operationId.value) ||
-    operationId.value < 1
-  )
-    return;
-
-  saving.value = true;
-
-  try {
-    await $fetch(`/api/operations/${operationId.value}/tools`, {
-      method: "PUT",
-      body: {
-        tools: tools.value.map((tool) => ({
-          id: tool.id,
-          preStatus: tool.preStatus,
-          postStatus: tool.postStatus,
-          preNote: tool.preNote,
-          postNote: tool.postNote,
-        })),
-      },
-    });
-
-    toast.success("Tools checklist saved successfully");
-    await fetchOperationDetail();
-  } catch (err: unknown) {
-    toast.error(getErrorMessage(err, "Failed to save tools"));
-  } finally {
-    saving.value = false;
-  }
-};
-
-const saveActivity = async (activity: OperationActivity): Promise<void> => {
-  if (
-    isReadOnly.value ||
-    Number.isNaN(operationId.value) ||
-    operationId.value < 1
-  )
-    return;
-
-  const pendingDocs = pendingDocumentationByTask.value[activity.id] || [];
-  const deletedDocIds = deletedDocumentationByTask.value[activity.id] || [];
-
-  if (activity.documentationRequired) {
-    const currentDocs = (activity.documentations || []).filter(
-      (doc) => !deletedDocIds.includes(doc.id),
-    );
-    if (currentDocs.length + pendingDocs.length === 0) {
-      toast.error("Documentation photo is required for this task");
-      return;
-    }
-  }
-
-  saving.value = true;
-  uploadingByTask.value[activity.id] = true;
-
-  try {
-    await $fetch(`/api/operations/${operationId.value}/tasks/${activity.id}`, {
-      method: "PUT",
-      body: {
-        status: activity.status,
-        notes: activity.notes,
-      },
-    });
-
-    for (const docId of deletedDocIds) {
-      await $fetch(
-        `/api/operations/${operationId.value}/tasks/${activity.id}/documentation/${docId}`,
-        {
-          method: "DELETE",
-        },
-      );
-      undoDocumentationDelete(activity.id, docId);
-    }
-
-    for (const pendingDoc of pendingDocs) {
-      const formData = new FormData();
-      formData.append("file", pendingDoc.file);
-
-      await $fetch(
-        `/api/operations/${operationId.value}/tasks/${activity.id}/documentation`,
-        {
-          method: "POST",
-          body: formData,
-        },
-      );
-
-      removePendingDocumentation(activity.id, pendingDoc.id);
-    }
-
-    clearTaskDocumentationDraft(activity.id);
-    await fetchOperationDetail();
-
-    toast.success("Activity saved successfully");
-  } catch (err: unknown) {
-    toast.error(getErrorMessage(err, "Failed to save activity"));
-  } finally {
-    saving.value = false;
-    uploadingByTask.value[activity.id] = false;
-  }
-};
-
-const finishOperation = async (): Promise<void> => {
-  if (
-    isReadOnly.value ||
-    Number.isNaN(operationId.value) ||
-    operationId.value < 1
-  )
-    return;
-
-  finishing.value = true;
-
-  try {
-    await $fetch(`/api/operations/${operationId.value}/complete`, {
-      method: "POST",
-    });
-
-    toast.success("Operation completed successfully");
-    showFinishDialog.value = false;
-    await navigateTo("/operations");
-  } catch (err: unknown) {
-    toast.error(getErrorMessage(err, "Failed to finish operation"));
-  } finally {
-    finishing.value = false;
-  }
-};
-
-const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-
-  if (Number.isNaN(date.getTime())) {
-    return "Invalid date";
-  }
-
-  return date.toLocaleDateString("en-US", {
-    weekday: "short",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-};
-
-const isTaskUploading = (taskId: number): boolean => {
-  return !!uploadingByTask.value[taskId];
-};
-
 const handleDocumentationFiles = async (
   activity: OperationActivity,
   files: File[],
@@ -344,9 +137,7 @@ const handleDocumentationFiles = async (
   )
     return;
 
-  if (files.length === 0) {
-    return;
-  }
+  if (files.length === 0) return;
 
   const remainingSlots = getRemainingDocumentationSlots(activity);
   if (remainingSlots <= 0) {
@@ -354,41 +145,21 @@ const handleDocumentationFiles = async (
     return;
   }
 
-  try {
-    const { addedCount, skippedCount, skippedNonImage } =
-      addPendingDocumentation(activity, files);
+  const { addedCount, skippedCount, skippedNonImage } =
+    addPendingDocumentation(activity, files);
 
-    if (addedCount === 0) {
-      toast.error("Please select image files");
-      return;
-    }
-
-    if (skippedNonImage) {
-      toast.warning("Only image files were added");
-    }
-
-    if (skippedCount > 0) {
-      toast.warning(`Only ${remainingSlots} photo(s) added due to task limit`);
-    }
-  } catch (err: unknown) {
-    toast.error(getErrorMessage(err, "Failed to add selected images"));
-  }
-};
-
-const getDaysLeft = (dateString: string): number | null => {
-  const operationDate = new Date(dateString);
-
-  if (Number.isNaN(operationDate.getTime())) {
-    return null;
+  if (addedCount === 0) {
+    toast.error("Please select image files");
+    return;
   }
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  operationDate.setHours(0, 0, 0, 0);
+  if (skippedNonImage) {
+    toast.warning("Only image files were added");
+  }
 
-  return Math.ceil(
-    (operationDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
-  );
+  if (skippedCount > 0) {
+    toast.warning(`Only ${remainingSlots} photo(s) added due to task limit`);
+  }
 };
 
 const operationDaysLeft = computed(() => {
@@ -400,31 +171,6 @@ const operationTitle = computed(() => {
   if (!operation.value) return "Operation";
   return operation.value.vesselName || operation.value.company;
 });
-
-const getStatusColor = (status: OperationStatus): string => {
-  switch (status) {
-    case "Active":
-      return "bg-green-100 text-green-700 border-green-200";
-    case "Draft":
-      return "bg-blue-100 text-blue-700 border-blue-200";
-    case "Complete":
-      return "bg-gray-100 text-gray-700 border-gray-200";
-    default:
-      return "bg-gray-100 text-gray-700 border-gray-200";
-  }
-};
-
-const getTypeColor = (type: OperationType): string => {
-  const typeMap: Record<OperationType, string> = {
-    Installation: "bg-purple-100 text-purple-700 border-purple-200",
-    Maintenance: "bg-orange-100 text-orange-700 border-orange-200",
-    "SAT/Commissioning": "bg-blue-100 text-blue-700 border-blue-200",
-    Upgrade: "bg-teal-100 text-teal-700 border-teal-200",
-    Uninstall: "bg-red-100 text-red-700 border-red-200",
-  };
-
-  return typeMap[type];
-};
 
 const goBack = async (): Promise<void> => {
   await navigateTo("/operations");
@@ -473,7 +219,7 @@ onMounted(async () => {
               Operations
             </h1>
             <Badge v-if="isReadOnly" variant="secondary" class="gap-1 ml-2">
-              {{ user?.username || "User" }}
+              {{ (user as any)?.username || "User" }}
             </Badge>
           </div>
         </div>
@@ -487,75 +233,13 @@ onMounted(async () => {
     </div>
 
     <div v-else-if="operation && !isReadOnly" class="p-4">
-      <Card class="border border-gray-200 shadow-sm mb-6">
-        <CardContent class="p-4">
-          <div class="mb-4">
-            <h2 class="font-semibold text-lg text-gray-900 mb-2">
-              {{ operationTitle }}
-            </h2>
-            <div class="flex items-center gap-2 flex-wrap">
-              <Badge
-                :class="getTypeColor(operation.type)"
-                variant="outline"
-                class="text-xs"
-              >
-                {{ operation.type }}
-              </Badge>
-              <Badge
-                :class="getStatusColor(operation.status)"
-                variant="outline"
-                class="text-xs capitalize"
-              >
-                {{ operation.status }}
-              </Badge>
-            </div>
-          </div>
-
-          <div class="space-y-2 text-sm text-gray-600 mb-4">
-            <div class="flex items-center gap-2">
-              <MapPin class="h-4 w-4 text-gray-400 shrink-0" />
-              <span>{{ operation.location }}</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <Calendar class="h-4 w-4 text-gray-400 shrink-0" />
-              <span>{{ formatDate(operation.date) }}</span>
-              <span
-                v-if="operationDaysLeft !== null"
-                class="ml-auto text-xs text-gray-400"
-              >
-                {{ operationDaysLeft }} days left
-              </span>
-            </div>
-            <div class="flex items-center gap-2">
-              <Building2 class="h-4 w-4 text-gray-400 shrink-0" />
-              <span>{{ operation.company }}</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <Users class="h-4 w-4 text-gray-400 shrink-0" />
-              <span>{{
-                operation.staffNames?.join(", ") || "No staff assigned"
-              }}</span>
-            </div>
-          </div>
-
-          <div class="space-y-2 mb-4">
-            <div class="flex justify-between text-sm font-medium">
-              <span>Progress</span>
-              <span>{{ calculateProgress }}%</span>
-            </div>
-            <Progress :model-value="calculateProgress" class="h-2" />
-          </div>
-
-          <div class="pt-3 border-t border-gray-100">
-            <p class="text-sm text-gray-600">
-              Supervisor:
-              <span class="font-medium text-gray-900">{{
-                operation.supervisorName
-              }}</span>
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <OperationInfoCard
+        :operation="operation"
+        :progress="calculateProgress"
+        :days-left="operationDaysLeft"
+        :formatted-date="formatDate(operation.date)"
+        class="mb-6"
+      />
 
       <Card class="border border-gray-200 shadow-sm mb-6">
         <CardContent class="p-0">
@@ -605,94 +289,39 @@ onMounted(async () => {
           </div>
 
           <div v-if="activeTab === 'operation'" class="p-4 space-y-4">
-            <Collapsible
-              v-for="(section, sectionIndex) in sections"
-              :key="section.id"
-              v-model:open="section.isOpen"
-            >
-              <CollapsibleTrigger as-child>
-                <Button
-                  variant="ghost"
-                  class="w-full justify-between p-4 h-auto bg-slate-50 border border-gray-200 rounded-lg hover:bg-slate-100 mb-2"
-                >
-                  <span class="font-medium text-gray-900">{{
-                    section.name
-                  }}</span>
-                  <ChevronDown
-                    :class="[
-                      'h-5 w-5 text-gray-400 transition-transform',
-                      section.isOpen && 'rotate-180',
-                    ]"
-                  />
-                </Button>
-              </CollapsibleTrigger>
-
-              <CollapsibleContent class="space-y-3">
-                <div
-                  v-for="(module, moduleIndex) in section.modules"
-                  :key="module.id"
-                >
-                  <div
-                    v-if="module.activities.length === 0"
-                    class="text-sm text-gray-500 italic p-4 text-center"
-                  >
-                    No activities in this section
-                  </div>
-                  <div
-                    v-for="(activity, activityIndex) in module.activities"
-                    :key="activity.id"
-                  >
-                    <OperationActivityCard
-                      :activity="activity"
-                      :editable="!isReadOnly"
-                      :max-docs-per-task="MAX_DOCS_PER_TASK"
-                      :is-uploading="isTaskUploading(activity.id)"
-                      :visible-docs="getVisibleUploadedDocs(activity)"
-                      :pending-docs="getPendingDocumentation(activity.id)"
-                      :deleted-docs="
-                        (activity.documentations || []).filter((item) =>
-                          getDeletedDocumentationIds(activity.id).includes(
-                            item.id,
-                          ),
-                        )
-                      "
-                      :remaining-slots="
-                        getRemainingDocumentationSlots(activity)
-                      "
-                      @set-status="
-                        (status) =>
-                          setActivityStatus(
-                            sectionIndex,
-                            moduleIndex,
-                            activityIndex,
-                            status,
-                          )
-                      "
-                      @update-notes="(value) => (activity.notes = value)"
-                      @add-documentation="
-                        (files) => handleDocumentationFiles(activity, files)
-                      "
-                      @remove-pending="
-                        (pendingId) =>
-                          removePendingDocumentation(activity.id, pendingId)
-                      "
-                      @mark-delete="
-                        (docId) =>
-                          markDocumentationForDelete(activity.id, docId)
-                      "
-                      @undo-delete="
-                        (docId) => undoDocumentationDelete(activity.id, docId)
-                      "
-                      @open-preview="
-                        (path, name, isLocal) =>
-                          openImagePreview(path, name, Boolean(isLocal))
-                      "
-                      @save="saveActivity(activity)"
-                    />
-                  </div>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
+            <OperationSectionsChecklist
+              :sections="sections"
+              :editable="!isReadOnly"
+              :max-docs-per-task="MAX_DOCS_PER_TASK"
+              :pending-by-task="pendingDocumentationByTask"
+              :deleted-by-task="deletedDocumentationByTask"
+              :uploading-by-task="uploadingByTask"
+              @set-status="
+                (sectionIndex, moduleIndex, activityIndex, status) =>
+                  setActivityStatus(sectionIndex, moduleIndex, activityIndex, status)
+              "
+              @update-notes="(activity, value) => (activity.notes = value)"
+              @add-documentation="
+                (activity, files) => handleDocumentationFiles(activity, files)
+              "
+              @remove-pending="
+                (activityId, pendingId) =>
+                  removePendingDocumentation(activityId, pendingId)
+              "
+              @mark-delete="
+                (activityId, docId) =>
+                  markDocumentationForDelete(activityId, docId)
+              "
+              @undo-delete="
+                (activityId, docId) =>
+                  undoDocumentationDelete(activityId, docId)
+              "
+              @open-preview="
+                (path, name, isLocal) =>
+                  openImagePreview(path, name, Boolean(isLocal))
+              "
+              @save="(activity) => saveActivity(activity)"
+            />
           </div>
         </CardContent>
       </Card>
@@ -751,7 +380,7 @@ onMounted(async () => {
                   </div>
                   <div class="flex gap-2">
                     <Users class="w-4 h-4 text-gray-400" />
-                    <span>{{ operation.staffNames.join(", ") }}</span>
+                    <span>{{ operation.staffNames?.join(", ") }}</span>
                   </div>
                 </div>
               </div>
