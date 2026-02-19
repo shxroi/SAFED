@@ -231,3 +231,18 @@
 - Verification:
   - `npm run test` (pass)
   - `npm run build` (pass)
+
+## 2026-02-19 (Execution UX polish + typing cleanup)
+
+- Updated task documentation upload interaction in `app/components/operation/checklist/OperationActivityCard.vue`:
+  - kept a single `Upload documentation` trigger
+  - expanded into explicit mobile options (`Take Photo` and `Choose from Gallery`) before opening file input
+  - preserved existing staging behavior and max-photo constraints
+- Reduced duplicated presentation logic in `app/components/operation/OperationInfoCard.vue` by reusing formatter helpers from `useOperationFormatters`.
+- Fixed missing runtime import in `app/composables/operation/useOperationSave.ts` by importing `ref` from Vue.
+- Removed unsafe cast usage in execution header (`app/pages/operations/[id]/execute.vue`) by using typed `user?.username`.
+- Added Nuxt auth module augmentation in `app/types/auth.d.ts` for typed session user fields.
+- Updated mobile top-bar page title rendering in `app/layouts/default.vue` to show dynamic current page label.
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass)

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, ImagePlus, X } from "lucide-vue-next";
+import { Camera, Check, Images, ImagePlus, X } from "lucide-vue-next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,7 +37,10 @@ const emit = defineEmits<{
   save: [];
 }>();
 
-const uploadInputId = computed(() => `doc-upload-${props.activity.id}`);
+const cameraInputId = computed(() => `doc-camera-${props.activity.id}`);
+const galleryInputId = computed(() => `doc-gallery-${props.activity.id}`);
+
+const showDocOptions = ref(false);
 
 const formatFileSize = (bytes: number): string => {
   if (bytes < 1024) return `${bytes} B`;
@@ -50,6 +53,7 @@ const onFilesPicked = (event: Event): void => {
   const files = input.files ? Array.from(input.files) : [];
   emit("add-documentation", files);
   input.value = "";
+  showDocOptions.value = false;
 };
 </script>
 
@@ -132,19 +136,49 @@ const onFilesPicked = (event: Event): void => {
         >
       </div>
 
-      <label :for="uploadInputId" class="block">
-        <Button
-          type="button"
-          variant="outline"
-          :disabled="props.isUploading || props.remainingSlots === 0"
-          class="w-full gap-2"
+      <Button
+        type="button"
+        variant="outline"
+        :disabled="props.isUploading || props.remainingSlots === 0"
+        class="w-full gap-2"
+        @click="showDocOptions = !showDocOptions"
+      >
+        <ImagePlus class="h-4 w-4" />
+        Upload documentation
+      </Button>
+
+      <div
+        v-if="showDocOptions"
+        class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+      >
+        <label
+          :for="cameraInputId"
+          class="flex cursor-pointer items-center gap-3 border-b border-gray-100 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100"
         >
-          <ImagePlus class="h-4 w-4" />
-          Upload documentation
-        </Button>
-      </label>
+          <Camera class="h-5 w-5 text-gray-500" />
+          Take Photo
+        </label>
+        <label
+          :for="galleryInputId"
+          class="flex cursor-pointer items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100"
+        >
+          <Images class="h-5 w-5 text-gray-500" />
+          Choose from Gallery
+        </label>
+      </div>
+
+      <!-- Camera input -->
       <input
-        :id="uploadInputId"
+        :id="cameraInputId"
+        type="file"
+        accept="image/*"
+        capture="environment"
+        class="hidden"
+        @change="onFilesPicked"
+      />
+      <!-- Gallery input -->
+      <input
+        :id="galleryInputId"
         type="file"
         accept="image/*"
         multiple

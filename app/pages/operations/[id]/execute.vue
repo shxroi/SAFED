@@ -219,7 +219,7 @@ onMounted(async () => {
               Operations
             </h1>
             <Badge v-if="isReadOnly" variant="secondary" class="gap-1 ml-2">
-              {{ (user as any)?.username || "User" }}
+              {{ user?.username || "User" }}
             </Badge>
           </div>
         </div>

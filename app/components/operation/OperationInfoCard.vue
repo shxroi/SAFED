@@ -3,7 +3,8 @@ import { Building2, Calendar, MapPin, Users } from "lucide-vue-next";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import type { Operation, OperationStatus, OperationType } from "../../../shared/types/operation";
+import type { Operation } from "../../../shared/types/operation";
+import { useOperationFormatters } from "@/composables/operation/useOperationFormatters";
 
 const props = defineProps<{
   operation: Operation;
@@ -12,29 +13,7 @@ const props = defineProps<{
   formattedDate: string;
 }>();
 
-const getStatusColor = (status: OperationStatus): string => {
-  switch (status) {
-    case "Active":
-      return "bg-green-100 text-green-700 border-green-200";
-    case "Draft":
-      return "bg-blue-100 text-blue-700 border-blue-200";
-    case "Complete":
-      return "bg-gray-100 text-gray-700 border-gray-200";
-    default:
-      return "bg-gray-100 text-gray-700 border-gray-200";
-  }
-};
-
-const getTypeColor = (type: OperationType): string => {
-  const typeMap: Record<OperationType, string> = {
-    Installation: "bg-purple-100 text-purple-700 border-purple-200",
-    Maintenance: "bg-orange-100 text-orange-700 border-orange-200",
-    "SAT/Commissioning": "bg-blue-100 text-blue-700 border-blue-200",
-    Upgrade: "bg-teal-100 text-teal-700 border-teal-200",
-    Uninstall: "bg-red-100 text-red-700 border-red-200",
-  };
-  return typeMap[type];
-};
+const { getStatusColor, getTypeColor } = useOperationFormatters();
 
 const title = computed(() =>
   props.operation.vesselName || props.operation.company,
