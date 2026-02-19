@@ -5,8 +5,13 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   srcDir: 'app/',
   css: ['~/assets/css/tailwind.css'],
-  modules: ['shadcn-nuxt', 'nuxt-auth-utils', // '@nuxt/test-utils',
-  '@nuxthub/core', '@nuxt/test-utils'],
+  modules: [
+    'shadcn-nuxt',
+    'nuxt-auth-utils',
+    '@nuxt/image',
+    '@nuxthub/core',
+    '@nuxt/test-utils',
+  ],
   shadcn: {
     /**
      * Prefix for all the imported component.
@@ -20,6 +25,10 @@ export default defineNuxtConfig({
      * @default "@/components/ui"
      */
     componentDir: '@/components/ui'
+  },
+  image: {
+    quality: 80,
+    format: ['webp'],
   },
   hub: {
     db: 'postgresql'
