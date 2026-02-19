@@ -185,3 +185,39 @@
 - Confirmed production build now completes successfully after earlier image path fixes in `app/pages/index.vue` and `app/layouts/default.vue`.
 - Verification:
   - `npm run build` (pass)
+
+## 2026-02-19 (Review regression remediation)
+
+- Diagnosed code-review regressions and documented evidence in:
+  - `docs/tasks/backend/19-02-2026/operations-review-regressions/context.md`
+  - `docs/tasks/backend/19-02-2026/operations-review-regressions/diagnostic-logs.md`
+  - `docs/tasks/backend/19-02-2026/operations-review-regressions/resolution.md`
+- Restored `OperationFilters` as a complete script+template component and re-enabled filter emits for search/type/date/my-only.
+- Fixed API error propagation in:
+  - `server/api/operations/[id]/checklist.get.ts`
+  - `server/api/operations/list.get.ts`
+  by rethrowing known H3 errors before wrapping unknown exceptions.
+- Added operation lifecycle guards (`Active` required) to execution mutation APIs:
+  - `server/api/operations/[id]/tools.put.ts`
+  - `server/api/operations/[id]/tasks/[taskId].put.ts`
+  - `server/api/operations/[id]/tasks/[taskId]/documentation.post.ts`
+  - `server/api/operations/[id]/tasks/[taskId]/documentation/[docId].delete.ts`
+- Aligned checklist tools payload with shared `OperationTool` contract by returning `operationId` in `server/api/operations/[id]/checklist.get.ts`.
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass)
+
+## 2026-02-19 (Execution page refactor + checklist UX alignment)
+
+- Refactored `app/pages/operations/[id]/execute.vue` to reduce page complexity and split repeated checklist UI into reusable components.
+- Added reusable checklist components:
+  - `app/components/operation/checklist/ToolsChecklistPanel.vue`
+  - `app/components/operation/checklist/OperationActivityCard.vue`
+- Added new documentation-state composable:
+  - `app/composables/operation/useExecutionDocumentation.ts`
+- Unified tools and jobdesk card layout usage across mobile execution and desktop monitor views by reusing the same component blocks.
+- Updated tools checklist save UX to one save action for the whole tools list (not per-tool save).
+- Kept operation activity save flow per-activity while preserving staged photo upload/delete behavior.
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass)

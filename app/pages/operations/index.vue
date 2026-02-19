@@ -2,6 +2,7 @@
 import type { Operation } from "../../../shared/types/operation";
 import { toast } from "vue-sonner";
 import { useOperationListFilters } from "~/composables/operation/useOperationListFilters";
+import DeleteConfirmDialog from "@/components/DeleteConfimDialog.vue";
 
 const { user } = useAuth();
 const userRole = computed(() => user.value?.roles);
@@ -9,6 +10,11 @@ const isIM = computed(() => userRole.value === "IM");
 
 const router = useRouter();
 const route = useRoute();
+
+// Delete dialog state
+const deleteDialogOpen = ref(false);
+const operationToDelete = ref<Operation | null>(null);
+const deleteAction = ref<"delete" | "cancel">("delete");
 
 const { searchQuery, selectedType, selectedDate, showMyOperationsOnly } =
   useOperationListFilters();
@@ -126,36 +132,60 @@ const handleEdit = (operation: Operation) => {
 };
 
 const handleDelete = async (operation: Operation) => {
-  const operationLabel = operation.vesselName
-    ? `${operation.vesselName} - ${operation.company}`
-    : operation.company;
-
-  if (
-    !confirm(`Are you sure you want to delete operation "${operationLabel}"?`)
-  ) {
-    return;
-  }
-
-  await mutateOperation(operation.id, { method: "DELETE" }, "deleting");
+  operationToDelete.value = operation;
+  deleteAction.value = "delete";
+  deleteDialogOpen.value = true;
 };
 
 const handleCancel = async (operation: Operation) => {
-  const operationLabel = operation.vesselName
-    ? `${operation.vesselName} - ${operation.company}`
-    : operation.company;
-
-  if (
-    !confirm(`Are you sure you want to cancel operation "${operationLabel}"?`)
-  ) {
-    return;
-  }
-
-  await mutateOperation(
-    operation.id,
-    { method: "PATCH", body: { status: "Cancelled" } },
-    "cancelling",
-  );
+  operationToDelete.value = operation;
+  deleteAction.value = "cancel";
+  deleteDialogOpen.value = true;
 };
+
+const handleConfirmDelete = async () => {
+  if (!operationToDelete.value) return;
+
+  const operation = operationToDelete.value;
+
+  try {
+    if (deleteAction.value === "delete") {
+      await mutateOperation(operation.id, { method: "DELETE" }, "deleting");
+      toast.success("Operation deleted successfully");
+    } else {
+      await mutateOperation(
+        operation.id,
+        { method: "PATCH", body: { status: "Cancelled" } },
+        "cancelling",
+      );
+      toast.success("Operation cancelled successfully");
+    }
+  } catch (error) {
+    // Error already handled in mutateOperation
+  } finally {
+    deleteDialogOpen.value = false;
+    operationToDelete.value = null;
+  }
+};
+
+const deleteDialogTitle = computed(() => {
+  if (!operationToDelete.value) return "";
+  return deleteAction.value === "delete" ? "Delete Operation?" : "Cancel Operation?";
+});
+
+const deleteDialogDescription = computed(() => {
+  if (!operationToDelete.value) return "";
+  
+  const operationLabel = operationToDelete.value.vesselName
+    ? `${operationToDelete.value.vesselName} - ${operationToDelete.value.company}`
+    : operationToDelete.value.company;
+
+  if (deleteAction.value === "delete") {
+    return `Are you sure you want to delete "${operationLabel}"? This action cannot be undone.`;
+  }
+  
+  return `Are you sure you want to cancel "${operationLabel}"? This will mark the operation as cancelled.`;
+});
 
 const handleNewOperation = () => {
   router.push("/operations/create");
@@ -211,5 +241,12 @@ const handleNewOperation = () => {
         Show all operations
       </Button>
     </div>
+
+    <DeleteConfirmDialog
+      v-model:open="deleteDialogOpen"
+      :title="deleteDialogTitle"
+      :description="deleteDialogDescription"
+      @confirm="handleConfirmDelete"
+    />
   </div>
 </template>

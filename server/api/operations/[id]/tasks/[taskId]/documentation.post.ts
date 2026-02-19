@@ -7,6 +7,7 @@ import { db } from "../../../../../utils/baseDb";
 import {
   fieldDocumentations,
   operationJobLists,
+  operations,
   operationsEnroll,
 } from "../../../../../db/schema";
 
@@ -54,6 +55,23 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 403,
         message: "You are not enrolled in this operation",
+      });
+    }
+
+    const [operation] = await db
+      .select({ id: operations.id, status: operations.status })
+      .from(operations)
+      .where(eq(operations.id, operationId))
+      .limit(1);
+
+    if (!operation) {
+      throw createError({ statusCode: 404, message: "Operation not found" });
+    }
+
+    if (operation.status !== "Active") {
+      throw createError({
+        statusCode: 400,
+        message: "Documentation can only be updated for active operations",
       });
     }
 

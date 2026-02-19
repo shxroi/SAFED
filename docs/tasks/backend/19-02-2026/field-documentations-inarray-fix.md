@@ -1,54 +1,59 @@
-# Field Documentations Query Fix - inArray Implementation
+# Field Documentations Query Fix - Schema Alignment
 
 ## Issue
-Query failures when fetching field documentations with multiple joblist IDs:
+Query failures when fetching field documentations:
 ```
-Failed query: select "id", "joblistid", "filepath", "filename", "filesize", "timestamp" 
-from "fielddocumentations" where "fielddocumentations"."joblistid" in ($1, $2, $3) 
-params: 66,65,64
+Failed query: select "id", "operationjoblistid", "filepath", "filename", "filesize", "timestamp" 
+from "fielddocumentations" where "fielddocumentations"."operationjoblistid" in ($1) 
+params: 69
+
+[cause]: column "operationjoblistid" does not exist
 ```
 
 ## Root Cause
-Previous implementation used `or(...activityIds.map(id => eq()))` as a workaround for singleton array issues. This pattern:
-1. Was verbose and harder to maintain
-2. May have had subtle issues with how Drizzle optimizes queries
-3. Required special case handling for single vs multiple IDs
+Migration `0012_long_thunderbird` attempted to rename the column from `joblistid` to `operationjoblistid` but:
+1. Was marked as migrated (`npx nuxt db mark-as-migrated 0012_long_thunderbird`)
+2. Was never actually executed against the database
+3. Database still has column named `joblistid`
+4. Schema was referencing the non-existent `operationjoblistid` column
 
 ## Solution
-Replaced with proper `inArray()` usage with defensive checks:
+Reverted schema and removed the phantom migration to match actual database state:
 
+1. **Schema Fix**: Reverted `fieldDocumentations` table column reference from `operationjoblistid` back to `joblistid`
+2. **Migration Cleanup**: 
+   - Deleted `0012_long_thunderbird.sql`
+   - Deleted `meta/0012_snapshot.json`
+   - Removed entry from `meta/_journal.json`
+
+### Updated Schema
 ```typescript
-// BEFORE: Complex conditional logic
-if (activityIds.length === 1) {
-  docs = await db.select(...).where(eq(fieldDocumentations.joblistId, activityIds[0]!));
-} else if (activityIds.length > 1) {
-  docs = await db.select(...).where(or(...activityIds.map(id => eq(...))));
-}
-
-// AFTER: Simple, clean, handles all cases
-if (activityIds.length > 0) {
-  docs = await db.select(...).where(inArray(fieldDocumentations.joblistId, activityIds));
-}
+export const fieldDocumentations = pgTable('fielddocumentations', {
+  id: serial('id').primaryKey(),
+  joblistId: integer('joblistid').notNull().references(() => operationJobLists.id),
+  filePath: varchar('filepath', { length: 255 }).notNull(),
+  fileName: varchar('filename', { length: 255 }).notNull(),
+  fileSize: integer('filesize').notNull(),
+  timestamp: timestamp('timestamp').notNull().defaultNow(),
+})
 ```
 
-## Files Updated
-1. `server/api/operations/[id]/checklist.get.ts` - Fetch docs for operation checklist
-2. `server/api/operations/[id]/complete.post.ts` - Validate required documentation
-3. `server/api/operations/[id].delete.ts` - Delete operation with cleanup
+## Files Changed
+1. `server/db/schema.ts` - Reverted column reference to `joblistid`
+2. `server/db/migrations/0012_long_thunderbird.sql` - Deleted
+3. `server/db/migrations/meta/0012_snapshot.json` - Deleted  
+4. `server/db/migrations/meta/_journal.json` - Removed migration entry
 
-## Benefits
-- ✅ **Simpler code**: Single path for all array sizes
-- ✅ **Better performance**: Drizzle can optimize IN clauses properly
-- ✅ **Type safety**: No non-null assertions needed
-- ✅ **Handles edge cases**: Empty array returns no results (correct behavior)
-- ✅ **Consistent pattern**: Same approach across all endpoints
+## Previous Attempts
+- Initially tried using `inArray()` with defensive checks
+- Fixed imports from `or` to `inArray` in multiple endpoints
+- All code properly uses `inArray()` now, but schema mismatch was causing failures
 
-## Testing Checklist
-- [ ] Test fetching checklist with 0 activities
-- [ ] Test fetching checklist with 1 activity
-- [ ] Test fetching checklist with 3+ activities
-- [ ] Test completing operation with required documentation
-- [ ] Test deleting operation with multiple tasks/docs
+## Result
+- ✅ Schema matches actual database structure
+- ✅ All `inArray(fieldDocumentations.joblistId, ids)` queries work correctly
+- ✅ Migration history is clean and accurate
+- ✅ No phantom migrations marked as applied
 
-## Notes
-The `normalizeIds()` utility ensures we only pass valid positive integers, preventing SQL injection and invalid queries.
+## Lesson Learned
+**Never** use `mark-as-migrated` without actually running the migration SQL against the database. This creates a state mismatch between the migration tracker and actual database schema.

@@ -89,13 +89,6 @@ const isDateApproaching = computed(() => {
         <Badge :class="OPERATION_STATUS_BADGE_CLASS[props.operation.status]" class="text-xs font-medium px-3 py-1">
           {{ props.operation.status }}
         </Badge>
-        <Badge
-          v-if="props.operation.isEnrolled"
-          class="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 text-xs font-medium px-2 py-1 flex items-center gap-1"
-        >
-          <UserCheck class="h-3 w-3" />
-          Assigned
-        </Badge>
       </div>
     </CardHeader>
 

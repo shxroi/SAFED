@@ -4,13 +4,10 @@ import {
   ArrowLeft,
   Building2,
   Calendar,
-  Check,
   ChevronDown,
   Download,
-  ImagePlus,
   MapPin,
   Users,
-  X,
 } from "lucide-vue-next";
 import { toast } from "vue-sonner";
 import {
@@ -38,21 +35,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Textarea } from "@/components/ui/textarea";
 import type {
   OperationStatus,
   OperationType,
 } from "../../../../shared/types/operation";
 import type { OperationActivity } from "../../../../shared/types/operation-execution";
+import OperationActivityCard from "~/components/operation/checklist/OperationActivityCard.vue";
+import ToolsChecklistPanel from "~/components/operation/checklist/ToolsChecklistPanel.vue";
 import { useOperationAccess } from "~/composables/operation/useOperationAccess";
+import { useExecutionDocumentation } from "~/composables/operation/useExecutionDocumentation";
 import { useOperationDetail } from "~/composables/operation/useOperationDetail";
 import { useOperationProgress } from "~/composables/operation/useOperationProgress";
-
-interface PendingDocumentation {
-  id: string;
-  file: File;
-  previewUrl: string;
-}
 
 const MAX_DOCS_PER_TASK = 2;
 
@@ -98,15 +91,27 @@ const showFinishDialog = ref(false);
 const activeTab = ref<"tools" | "operation">("tools");
 const monitorTab = ref<"tools" | "operation">("operation");
 const selectedSectionId = ref<number | null>(null);
-const previewOpen = ref(false);
-const previewImagePath = ref("");
-const previewImageName = ref("Documentation image");
-const previewImageIsLocal = ref(false);
 const uploadingByTask = ref<Record<number, boolean>>({});
-const pendingDocumentationByTask = ref<Record<number, PendingDocumentation[]>>(
-  {},
-);
-const deletedDocumentationByTask = ref<Record<number, number[]>>({});
+
+const {
+  previewOpen,
+  previewImagePath,
+  previewImageName,
+  previewImageIsLocal,
+  pendingDocumentationByTask,
+  deletedDocumentationByTask,
+  getDeletedDocumentationIds,
+  getVisibleUploadedDocs,
+  getPendingDocumentation,
+  getRemainingDocumentationSlots,
+  clearTaskDocumentationDraft,
+  clearAllDocumentationDrafts,
+  openImagePreview,
+  removePendingDocumentation,
+  markDocumentationForDelete,
+  undoDocumentationDelete,
+  addPendingDocumentation,
+} = useExecutionDocumentation(MAX_DOCS_PER_TASK);
 
 const selectedSection = computed(() => {
   return sections.value.find(
@@ -125,12 +130,7 @@ watch(
 );
 
 onBeforeUnmount(() => {
-  for (const taskId of Object.keys(pendingDocumentationByTask.value)) {
-    const numericTaskId = Number(taskId);
-    if (!Number.isNaN(numericTaskId)) {
-      clearTaskDocumentationDraft(numericTaskId);
-    }
-  }
+  clearAllDocumentationDrafts();
 });
 
 const setToolCondition = (
@@ -149,6 +149,24 @@ const setToolCondition = (
   }
 
   tool.postStatus = status;
+};
+
+const updateToolNote = (
+  toolIndex: number,
+  type: "pre" | "post",
+  value: string,
+) => {
+  if (isReadOnly.value) return;
+
+  const tool = tools.value[toolIndex];
+  if (!tool) return;
+
+  if (type === "pre") {
+    tool.preNote = value;
+    return;
+  }
+
+  tool.postNote = value;
 };
 
 const setActivityStatus = (
@@ -311,89 +329,13 @@ const formatDate = (dateString: string): string => {
   });
 };
 
-const formatFileSize = (bytes: number): string => {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
-
-const getDeletedDocumentationIds = (taskId: number): number[] => {
-  return deletedDocumentationByTask.value[taskId] || [];
-};
-
-const getVisibleUploadedDocs = (activity: OperationActivity) => {
-  const deletedIds = new Set(getDeletedDocumentationIds(activity.id));
-  return (activity.documentations || []).filter(
-    (doc) => !deletedIds.has(doc.id),
-  );
-};
-
-const getPendingDocumentation = (taskId: number): PendingDocumentation[] => {
-  return pendingDocumentationByTask.value[taskId] || [];
-};
-
-const getRemainingDocumentationSlots = (
-  activity: OperationActivity,
-): number => {
-  const used =
-    getVisibleUploadedDocs(activity).length +
-    getPendingDocumentation(activity.id).length;
-  return Math.max(0, MAX_DOCS_PER_TASK - used);
-};
-
-const clearTaskDocumentationDraft = (taskId: number): void => {
-  const pending = pendingDocumentationByTask.value[taskId] || [];
-  for (const item of pending) {
-    URL.revokeObjectURL(item.previewUrl);
-  }
-
-  pendingDocumentationByTask.value[taskId] = [];
-  deletedDocumentationByTask.value[taskId] = [];
-};
-
 const isTaskUploading = (taskId: number): boolean => {
   return !!uploadingByTask.value[taskId];
 };
 
-const openImagePreview = (path: string, name: string, isLocal = false) => {
-  previewImagePath.value = path;
-  previewImageName.value = name;
-  previewImageIsLocal.value = isLocal;
-  previewOpen.value = true;
-};
-
-const removePendingDocumentation = (
-  taskId: number,
-  pendingId: string,
-): void => {
-  const pending = pendingDocumentationByTask.value[taskId] || [];
-  const next = pending.filter((item) => {
-    if (item.id !== pendingId) return true;
-
-    URL.revokeObjectURL(item.previewUrl);
-    return false;
-  });
-
-  pendingDocumentationByTask.value[taskId] = next;
-};
-
-const markDocumentationForDelete = (taskId: number, docId: number): void => {
-  const current = deletedDocumentationByTask.value[taskId] || [];
-  if (!current.includes(docId)) {
-    deletedDocumentationByTask.value[taskId] = [...current, docId];
-  }
-};
-
-const undoDocumentationDelete = (taskId: number, docId: number): void => {
-  const current = deletedDocumentationByTask.value[taskId] || [];
-  deletedDocumentationByTask.value[taskId] = current.filter(
-    (item) => item !== docId,
-  );
-};
-
-const handleDocumentationSelect = async (
+const handleDocumentationFiles = async (
   activity: OperationActivity,
-  event: Event,
+  files: File[],
 ): Promise<void> => {
   if (
     isReadOnly.value ||
@@ -402,50 +344,34 @@ const handleDocumentationSelect = async (
   )
     return;
 
-  const input = event.target as HTMLInputElement;
-  const files = input.files;
-
-  if (!files || files.length === 0) {
+  if (files.length === 0) {
     return;
   }
 
   const remainingSlots = getRemainingDocumentationSlots(activity);
   if (remainingSlots <= 0) {
     toast.error(`Maximum ${MAX_DOCS_PER_TASK} photos allowed per task`);
-    input.value = "";
     return;
   }
 
   try {
-    const selectedFiles = Array.from(files)
-      .filter((file) => file.type.startsWith("image/"))
-      .slice(0, remainingSlots);
+    const { addedCount, skippedCount, skippedNonImage } =
+      addPendingDocumentation(activity, files);
 
-    if (selectedFiles.length === 0) {
+    if (addedCount === 0) {
       toast.error("Please select image files");
       return;
     }
 
-    if (selectedFiles.length < files.length) {
+    if (skippedNonImage) {
+      toast.warning("Only image files were added");
+    }
+
+    if (skippedCount > 0) {
       toast.warning(`Only ${remainingSlots} photo(s) added due to task limit`);
     }
-
-    const current = pendingDocumentationByTask.value[activity.id] || [];
-    const next = [...current];
-
-    for (const file of selectedFiles) {
-      next.push({
-        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        file,
-        previewUrl: URL.createObjectURL(file),
-      });
-    }
-
-    pendingDocumentationByTask.value[activity.id] = next;
   } catch (err: unknown) {
     toast.error(getErrorMessage(err, "Failed to add selected images"));
-  } finally {
-    input.value = "";
   }
 };
 
@@ -667,102 +593,15 @@ onMounted(async () => {
             </div>
           </div>
 
-          <div v-if="activeTab === 'tools'" class="p-4 space-y-4">
-            <div
-              v-for="(tool, toolIndex) in tools"
-              :key="tool.id"
-              class="bg-slate-50 border border-gray-200 rounded-lg p-4"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h4 class="font-medium text-gray-900">{{ tool.name }}</h4>
-                <span class="text-sm font-medium"
-                  >QTY : {{ tool.quantity }}</span
-                >
-              </div>
-
-              <div class="space-y-3 mb-4 border-b border-gray-200 pb-4">
-                <div class="flex items-center justify-between">
-                  <span class="text-sm text-gray-600">Pre condition</span>
-                  <div class="flex gap-2" v-if="!tool.preStatus">
-                    <Button
-                      size="sm"
-                      class="bg-green-300 hover:bg-green-400 text-green-800 w-12 h-8"
-                      @click="setToolCondition(toolIndex, 'pre', 'Good')"
-                    >
-                      <Check class="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      class="bg-red-300 hover:bg-red-400 text-red-800 w-12 h-8"
-                      @click="setToolCondition(toolIndex, 'pre', 'Not Good')"
-                    >
-                      <X class="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <Badge
-                    v-else
-                    :class="
-                      tool.preStatus === 'Good'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-red-100 text-red-700'
-                    "
-                  >
-                    {{ tool.preStatus }}
-                  </Badge>
-                </div>
-                <Textarea
-                  v-if="tool.preStatus === 'Not Good'"
-                  v-model="tool.preNote"
-                  placeholder="Type tool note here"
-                  class="bg-white"
-                />
-              </div>
-
-              <div class="space-y-3">
-                <div class="flex items-center justify-between">
-                  <span class="text-sm text-gray-600">Post condition</span>
-                  <div class="flex gap-2" v-if="!tool.postStatus">
-                    <Button
-                      size="sm"
-                      class="bg-green-300 hover:bg-green-400 text-green-800 w-12 h-8"
-                      @click="setToolCondition(toolIndex, 'post', 'Good')"
-                    >
-                      <Check class="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      class="bg-red-300 hover:bg-red-400 text-red-800 w-12 h-8"
-                      @click="setToolCondition(toolIndex, 'post', 'Not Good')"
-                    >
-                      <X class="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <Badge
-                    v-else
-                    :class="
-                      tool.postStatus === 'Good'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-red-100 text-red-700'
-                    "
-                  >
-                    {{ tool.postStatus }}
-                  </Badge>
-                </div>
-                <Textarea
-                  v-if="tool.postStatus === 'Not Good'"
-                  v-model="tool.postNote"
-                  placeholder="Type post-condition note"
-                  class="bg-white"
-                />
-              </div>
-
-              <Button
-                class="w-full mt-4 bg-white hover:bg-gray-50 text-gray-900 border border-gray-200"
-                @click="saveTools"
-              >
-                Save
-              </Button>
-            </div>
+          <div v-if="activeTab === 'tools'" class="p-4">
+            <ToolsChecklistPanel
+              :tools="tools"
+              :editable="!isReadOnly"
+              :saving="saving"
+              @set-condition="setToolCondition"
+              @update-note="updateToolNote"
+              @save="saveTools"
+            />
           </div>
 
           <div v-if="activeTab === 'operation'" class="p-4 space-y-4">
@@ -802,294 +641,54 @@ onMounted(async () => {
                   <div
                     v-for="(activity, activityIndex) in module.activities"
                     :key="activity.id"
-                    class="bg-white border border-gray-200 rounded-lg p-4 mb-3"
                   >
-                    <p class="text-sm text-gray-900 mb-4">
-                      {{ activity.jobDescription }}
-                    </p>
-                    <div class="flex items-center justify-between mb-4">
-                      <span class="text-sm font-medium text-gray-700"
-                        >Condition</span
-                      >
-                      <div class="flex gap-2" v-if="!activity.status">
-                        <Button
-                          size="sm"
-                          class="bg-green-300 hover:bg-green-400 text-green-800 w-12 h-8"
-                          @click="
-                            setActivityStatus(
-                              sectionIndex,
-                              moduleIndex,
-                              activityIndex,
-                              'Good',
-                            )
-                          "
-                        >
-                          <Check class="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          class="bg-red-300 hover:bg-red-400 text-red-800 w-12 h-8"
-                          @click="
-                            setActivityStatus(
-                              sectionIndex,
-                              moduleIndex,
-                              activityIndex,
-                              'Not Good',
-                            )
-                          "
-                        >
-                          <X class="w-4 h-4" />
-                        </Button>
-                      </div>
-                      <Badge
-                        v-else
-                        :class="
-                          activity.status === 'Good'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-red-100 text-red-700'
-                        "
-                      >
-                        {{ activity.status }}
-                      </Badge>
-                    </div>
-
-                    <div class="mb-3 space-y-3">
-                      <div class="flex items-center justify-between">
-                        <Badge
-                          v-if="activity.documentationRequired"
-                          class="bg-amber-100 text-amber-800 border border-amber-200"
-                        >
-                          Documentation Required
-                        </Badge>
-                        <span v-else class="text-xs text-gray-500"
-                          >Documentation optional</span
-                        >
-                        <span class="text-xs text-gray-500"
-                          >Max {{ MAX_DOCS_PER_TASK }} photos</span
-                        >
-                      </div>
-
-                      <div class="flex flex-wrap items-center gap-2">
-                        <label
-                          :for="`doc-camera-${activity.id}`"
-                          class="inline-flex"
-                        >
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            :disabled="
-                              isTaskUploading(activity.id) ||
-                              getRemainingDocumentationSlots(activity) === 0
-                            "
-                            class="gap-2"
-                          >
-                            <ImagePlus class="h-4 w-4" />
-                            Camera
-                          </Button>
-                        </label>
-                        <input
-                          :id="`doc-camera-${activity.id}`"
-                          type="file"
-                          accept="image/*"
-                          capture="environment"
-                          class="hidden"
-                          @change="
-                            (event) =>
-                              handleDocumentationSelect(activity, event)
-                          "
-                        />
-
-                        <label
-                          :for="`doc-gallery-${activity.id}`"
-                          class="inline-flex"
-                        >
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            :disabled="
-                              isTaskUploading(activity.id) ||
-                              getRemainingDocumentationSlots(activity) === 0
-                            "
-                            class="gap-2"
-                          >
-                            <ImagePlus class="h-4 w-4" />
-                            Gallery
-                          </Button>
-                        </label>
-                        <input
-                          :id="`doc-gallery-${activity.id}`"
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          class="hidden"
-                          @change="
-                            (event) =>
-                              handleDocumentationSelect(activity, event)
-                          "
-                        />
-                      </div>
-                    </div>
-
-                    <Textarea
-                      v-model="activity.notes"
-                      placeholder="Type activity note"
-                      class="mb-4 bg-gray-50"
-                    />
-
-                    <div
-                      v-if="getVisibleUploadedDocs(activity).length > 0"
-                      class="mb-4"
-                    >
-                      <p class="text-xs font-medium text-gray-500 mb-2">
-                        Uploaded Photos
-                      </p>
-                      <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        <button
-                          v-for="doc in getVisibleUploadedDocs(activity)"
-                          :key="doc.id"
-                          type="button"
-                          class="relative rounded border border-gray-200 overflow-hidden hover:opacity-90"
-                          @click="openImagePreview(doc.filePath, doc.fileName)"
-                        >
-                          <NuxtImg
-                            :src="doc.filePath"
-                            alt="Documentation preview"
-                            width="200"
-                            height="140"
-                            format="webp"
-                            loading="lazy"
-                            class="w-full h-24 object-cover"
-                          />
-                          <span
-                            class="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] px-2 py-1 truncate"
-                          >
-                            {{ doc.fileName }} ({{
-                              formatFileSize(doc.fileSize)
-                            }})
-                          </span>
-                        </button>
-                      </div>
-
-                      <div class="mt-2 flex flex-wrap gap-2">
-                        <Button
-                          v-for="doc in getVisibleUploadedDocs(activity)"
-                          :key="`mark-delete-${doc.id}`"
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          class="h-7 px-2 text-xs text-red-600 hover:text-red-700"
-                          @click="
-                            markDocumentationForDelete(activity.id, doc.id)
-                          "
-                        >
-                          Remove {{ doc.fileName }}
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div
-                      v-if="getDeletedDocumentationIds(activity.id).length > 0"
-                      class="mb-4 rounded border border-orange-200 bg-orange-50 p-2"
-                    >
-                      <p class="text-xs font-medium text-orange-700 mb-2">
-                        Marked for removal (save to apply)
-                      </p>
-                      <div class="flex flex-wrap gap-2">
-                        <Button
-                          v-for="doc in (activity.documentations || []).filter(
-                            (item) =>
-                              getDeletedDocumentationIds(activity.id).includes(
-                                item.id,
-                              ),
-                          )"
-                          :key="`undo-${doc.id}`"
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          class="h-7 px-2 text-xs"
-                          @click="undoDocumentationDelete(activity.id, doc.id)"
-                        >
-                          Undo {{ doc.fileName }}
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div
-                      v-if="getPendingDocumentation(activity.id).length > 0"
-                      class="mb-4"
-                    >
-                      <p class="text-xs font-medium text-gray-500 mb-2">
-                        Pending Photos (save to upload)
-                      </p>
-                      <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        <div
-                          v-for="pendingDoc in getPendingDocumentation(
-                            activity.id,
-                          )"
-                          :key="pendingDoc.id"
-                          class="relative rounded border border-gray-200 overflow-hidden"
-                        >
-                          <button
-                            type="button"
-                            class="w-full"
-                            @click="
-                              openImagePreview(
-                                pendingDoc.previewUrl,
-                                pendingDoc.file.name,
-                                true,
-                              )
-                            "
-                          >
-                            <img
-                              :src="pendingDoc.previewUrl"
-                              :alt="pendingDoc.file.name"
-                              class="w-full h-24 object-cover"
-                            />
-                            <span
-                              class="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] px-2 py-1 truncate"
-                            >
-                              {{ pendingDoc.file.name }} ({{
-                                formatFileSize(pendingDoc.file.size)
-                              }})
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            class="absolute top-1 right-1 rounded bg-white/90 px-1 text-xs text-red-600"
-                            @click="
-                              removePendingDocumentation(
-                                activity.id,
-                                pendingDoc.id,
-                              )
-                            "
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <p
-                      v-if="
-                        activity.documentationRequired &&
-                        getVisibleUploadedDocs(activity).length +
-                          getPendingDocumentation(activity.id).length ===
-                          0
+                    <OperationActivityCard
+                      :activity="activity"
+                      :editable="!isReadOnly"
+                      :max-docs-per-task="MAX_DOCS_PER_TASK"
+                      :is-uploading="isTaskUploading(activity.id)"
+                      :visible-docs="getVisibleUploadedDocs(activity)"
+                      :pending-docs="getPendingDocumentation(activity.id)"
+                      :deleted-docs="
+                        (activity.documentations || []).filter((item) =>
+                          getDeletedDocumentationIds(activity.id).includes(
+                            item.id,
+                          ),
+                        )
                       "
-                      class="mb-4 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2"
-                    >
-                      No documentation uploaded yet.
-                    </p>
-
-                    <Button
-                      class="w-full bg-slate-100 hover:bg-slate-200 text-slate-900 font-medium"
-                      :disabled="isTaskUploading(activity.id)"
-                      @click="saveActivity(activity)"
-                    >
-                      {{ isTaskUploading(activity.id) ? "Saving…" : "Save" }}
-                    </Button>
+                      :remaining-slots="
+                        getRemainingDocumentationSlots(activity)
+                      "
+                      @set-status="
+                        (status) =>
+                          setActivityStatus(
+                            sectionIndex,
+                            moduleIndex,
+                            activityIndex,
+                            status,
+                          )
+                      "
+                      @update-notes="(value) => (activity.notes = value)"
+                      @add-documentation="
+                        (files) => handleDocumentationFiles(activity, files)
+                      "
+                      @remove-pending="
+                        (pendingId) =>
+                          removePendingDocumentation(activity.id, pendingId)
+                      "
+                      @mark-delete="
+                        (docId) =>
+                          markDocumentationForDelete(activity.id, docId)
+                      "
+                      @undo-delete="
+                        (docId) => undoDocumentationDelete(activity.id, docId)
+                      "
+                      @open-preview="
+                        (path, name, isLocal) =>
+                          openImagePreview(path, name, Boolean(isLocal))
+                      "
+                      @save="saveActivity(activity)"
+                    />
                   </div>
                 </div>
               </CollapsibleContent>
@@ -1252,94 +851,19 @@ onMounted(async () => {
                     <div
                       v-for="activity in module.activities"
                       :key="activity.id"
-                      class="border border-gray-100 rounded-lg p-4 mb-4"
                     >
-                      <div class="flex justify-between items-start mb-3">
-                        <div
-                          class="text-xs text-gray-500 flex items-center gap-2"
-                        >
-                          <span class="font-bold bg-gray-100 px-1 rounded"
-                            >CN</span
-                          >
-                          <span>{{
-                            activity.executedByName || "Unknown Staff"
-                          }}</span>
-                        </div>
-                        <Badge
-                          v-if="activity.status"
-                          :class="
-                            activity.status === 'Good'
-                              ? 'bg-green-600 hover:bg-green-700 text-white'
-                              : 'bg-red-600 hover:bg-red-700 text-white'
-                          "
-                        >
-                          {{
-                            activity.status === "Good"
-                              ? "Good condition"
-                              : "Bad condition"
-                          }}
-                        </Badge>
-                        <Badge v-else variant="outline" class="text-gray-400"
-                          >Pending</Badge
-                        >
-                      </div>
-
-                      <p class="text-sm text-gray-900 mb-3">
-                        {{ activity.jobDescription }}
-                      </p>
-
-                      <Badge
-                        v-if="activity.documentationRequired"
-                        class="mb-3 bg-amber-100 text-amber-800 border border-amber-200"
-                      >
-                        Documentation Required
-                      </Badge>
-
-                      <div
-                        v-if="activity.notes"
-                        class="bg-slate-50 p-3 rounded text-sm text-gray-600 italic"
-                      >
-                        <span
-                          class="font-medium text-slate-900 not-italic block mb-1"
-                          >Note:</span
-                        >
-                        {{ activity.notes }}
-                      </div>
-
-                      <div
-                        v-if="(activity.documentations?.length || 0) > 0"
-                        class="mt-3"
-                      >
-                        <p class="text-xs font-medium text-gray-500 mb-2">
-                          Uploaded Photos
-                        </p>
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-                          <button
-                            v-for="doc in activity.documentations"
-                            :key="doc.id"
-                            type="button"
-                            class="relative rounded border border-gray-200 overflow-hidden hover:opacity-90"
-                            @click="
-                              openImagePreview(doc.filePath, doc.fileName)
-                            "
-                          >
-                            <NuxtImg
-                              :src="doc.filePath"
-                              alt="Documentation preview"
-                              width="200"
-                              height="140"
-                              format="webp"
-                              loading="lazy"
-                              class="w-full h-24 object-cover"
-                            />
-                            <span
-                              class="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] px-2 py-1 truncate"
-                            >
-                              {{ doc.fileName }}
-                            </span>
-                          </button>
-                        </div>
-                      </div>
+                      <OperationActivityCard
+                        :activity="activity"
+                        :max-docs-per-task="MAX_DOCS_PER_TASK"
+                        :visible-docs="activity.documentations || []"
+                        :pending-docs="[]"
+                        :deleted-docs="[]"
+                        :remaining-slots="0"
+                        @open-preview="
+                          (path, name, isLocal) =>
+                            openImagePreview(path, name, Boolean(isLocal))
+                        "
+                      />
                     </div>
                   </div>
                 </CardContent>
@@ -1348,71 +872,7 @@ onMounted(async () => {
           </div>
 
           <div v-if="monitorTab === 'tools'" class="col-span-12">
-            <div class="space-y-4">
-              <Card v-for="tool in tools" :key="tool.id">
-                <CardContent class="p-4">
-                  <div class="flex items-center justify-between mb-4">
-                    <h4 class="font-medium text-gray-900">{{ tool.name }}</h4>
-                    <Badge variant="outline">Qty: {{ tool.quantity }}</Badge>
-                  </div>
-
-                  <div class="grid grid-cols-2 gap-8">
-                    <div class="space-y-2">
-                      <div class="flex items-center justify-between text-sm">
-                        <span class="text-gray-500">Pre-Condition</span>
-                        <Badge
-                          v-if="tool.preStatus"
-                          :class="
-                            tool.preStatus === 'Good'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-red-100 text-red-700'
-                          "
-                        >
-                          {{ tool.preStatus }}
-                        </Badge>
-                        <span v-else class="text-gray-400">-</span>
-                      </div>
-                      <p
-                        v-if="tool.preNote"
-                        class="text-sm text-gray-600 bg-gray-50 p-2 rounded italic"
-                      >
-                        "{{ tool.preNote }}"
-                      </p>
-                    </div>
-
-                    <div class="space-y-2">
-                      <div class="flex items-center justify-between text-sm">
-                        <span class="text-gray-500">Post-Condition</span>
-                        <Badge
-                          v-if="tool.postStatus"
-                          :class="
-                            tool.postStatus === 'Good'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-red-100 text-red-700'
-                          "
-                        >
-                          {{ tool.postStatus }}
-                        </Badge>
-                        <span v-else class="text-gray-400">-</span>
-                      </div>
-                      <p
-                        v-if="tool.postNote"
-                        class="text-sm text-gray-600 bg-gray-50 p-2 rounded italic"
-                      >
-                        "{{ tool.postNote }}"
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div
-                v-if="tools.length === 0"
-                class="text-center py-12 text-gray-500 italic"
-              >
-                No tools listed for this operation.
-              </div>
-            </div>
+            <ToolsChecklistPanel :tools="tools" />
           </div>
         </div>
       </div>

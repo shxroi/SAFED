@@ -71,7 +71,7 @@ export const operationJobLists = pgTable('operationjoblists', {
 
 export const fieldDocumentations = pgTable('fielddocumentations', {
   id: serial('id').primaryKey(),
-  joblistId: integer('joblistid').notNull().references(() => operationJobLists.id),
+  joblistId: integer('operationjoblistid').notNull().references(() => operationJobLists.id),
   filePath: varchar('filepath', { length: 255 }).notNull(),
   fileName: varchar('filename', { length: 255 }).notNull(),
   fileSize: integer('filesize').notNull(),

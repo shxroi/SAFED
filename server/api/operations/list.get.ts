@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
     const search = query.search as string | undefined;
     const type = query.type as string | undefined;
     const date = query.date as string | undefined;
-    const myOnly = query.my === 'true';
+    const myOnly = query.my === "true";
 
     // Build where conditions
     const conditions = [eq(operations.status, "Active")];
@@ -35,21 +35,19 @@ export default defineEventHandler(async (event) => {
       conditions.push(
         or(
           like(sql`lower(${operations.company})`, searchLower),
-          like(sql`lower(${operations.vesselName})`, searchLower)
-        )!
+          like(sql`lower(${operations.vesselName})`, searchLower),
+        )!,
       );
     }
 
-    if (type && type !== 'ALL') {
+    if (type && type !== "ALL") {
       conditions.push(eq(operations.type, type as any));
     }
 
     if (date) {
       // Assuming date is passed as YYYY-MM-DD
       // We cast the timestamp to date for comparison
-      conditions.push(
-        sql`DATE(${operations.date}) = ${date}`
-      );
+      conditions.push(sql`DATE(${operations.date}) = ${date}`);
     }
 
     if (myOnly) {
@@ -59,7 +57,7 @@ export default defineEventHandler(async (event) => {
         .from(operationsEnroll)
         .where(eq(operationsEnroll.userId, userId));
 
-      const enrolledIds = userEnrollments.map(e => e.operationId);
+      const enrolledIds = userEnrollments.map((e) => e.operationId);
 
       if (enrolledIds.length > 0) {
         conditions.push(inArray(operations.id, enrolledIds));
@@ -143,6 +141,8 @@ export default defineEventHandler(async (event) => {
       operations: operationsWithStatus,
     };
   } catch (error: any) {
+    if (error.statusCode) throw error;
+
     console.error("Error fetching operations:", error);
     throw createError({
       statusCode: 500,

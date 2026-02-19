@@ -180,6 +180,7 @@ export default defineEventHandler(async (event) => {
       success: true,
       tools: tools.map((tool) => ({
         id: tool.id,
+        operationId: tool.operationId,
         toolId: tool.toolId,
         name: tool.name || "Unknown Tool",
         quantity: tool.quantity,
@@ -191,6 +192,8 @@ export default defineEventHandler(async (event) => {
       sections: formattedSections,
     };
   } catch (error: any) {
+    if (error.statusCode) throw error;
+
     console.error("Error fetching checklist:", error);
     throw createError({
       statusCode: 500,
