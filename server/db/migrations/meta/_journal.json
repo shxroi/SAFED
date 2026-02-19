@@ -71,6 +71,20 @@
       "when": 1770898827766,
       "tag": "0009_colossal_scrambler",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1771432739026,
+      "tag": "0010_worthless_hitman",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1771433202271,
+      "tag": "0011_white_shotgun",
+      "breakpoints": true
     }
   ]
 }

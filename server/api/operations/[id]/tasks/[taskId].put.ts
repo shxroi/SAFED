@@ -5,15 +5,16 @@ import { eq, and } from 'drizzle-orm'
 export default defineEventHandler(async (event) => {
     try {
         const session = await getUserSession(event)
+        const sessionUser = session?.user as { id?: number | string; roles?: string } | undefined
 
-        if (!session?.user?.id) {
+        if (!sessionUser?.id) {
             throw createError({
                 statusCode: 401,
                 message: 'Unauthorized',
             })
         }
 
-        const userId = Number(session.user.id)
+        const userId = Number(sessionUser.id)
         const idParam = getRouterParam(event, 'id')
         const taskIdParam = getRouterParam(event, 'taskId')
         const body = await readBody(event)
@@ -27,6 +28,13 @@ export default defineEventHandler(async (event) => {
 
         const operationId = parseInt(idParam, 10)
         const taskId = parseInt(taskIdParam, 10)
+
+        if (Number.isNaN(operationId) || operationId < 1 || Number.isNaN(taskId) || taskId < 1) {
+            throw createError({
+                statusCode: 400,
+                message: 'Invalid operation ID or task ID',
+            })
+        }
 
         // Verify user is enrolled in this operation
         const [enrollment] = await db
@@ -49,9 +57,16 @@ export default defineEventHandler(async (event) => {
 
         const { status, notes } = body
 
+        if (status !== undefined && status !== null && status !== 'Good' && status !== 'Not Good') {
+            throw createError({
+                statusCode: 400,
+                message: 'Invalid status value',
+            })
+        }
+
         // Update the task status and notes
         // We also track who updated it (executedBy)
-        await db
+        const updated = await db
             .update(operationJobLists)
             .set({
                 status: status || null,
@@ -64,6 +79,14 @@ export default defineEventHandler(async (event) => {
                     eq(operationJobLists.operationId, operationId)
                 )
             )
+            .returning({ id: operationJobLists.id })
+
+        if (updated.length === 0) {
+            throw createError({
+                statusCode: 404,
+                message: 'Task not found',
+            })
+        }
 
         return {
             success: true,

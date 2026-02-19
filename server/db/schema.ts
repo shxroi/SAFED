@@ -1,5 +1,3 @@
-import { time } from 'console';
-import { datetime } from 'drizzle-orm/mysql-core';
 import { pgTable, serial, varchar, timestamp, boolean, pgEnum, text, integer } from 'drizzle-orm/pg-core';
 
 export const userRolesEnum = pgEnum('userroles', ['IM', 'OBSERVER', 'STAFF']);
@@ -65,7 +63,17 @@ export const operationJobLists = pgTable('operationjoblists', {
   operationId: integer('operationid').notNull().references(() => operations.id),
   executedBy: integer('executedby').references(() => users.id),
   jobDescription: text('jobdescription').notNull(),
+  documentationRequired: boolean('documentationrequired').notNull().default(false),
   status: checklistStatusEnum('status'),
   notes: text('notes'),
   createAt: timestamp('createdat').notNull().defaultNow(),
+})
+
+export const fieldDocumentations = pgTable('fielddocumentations', {
+  id: serial('id').primaryKey(),
+  joblistId: integer('joblistid').notNull().references(() => operationJobLists.id),
+  filePath: varchar('filepath', { length: 255 }).notNull(),
+  fileName: varchar('filename', { length: 255 }).notNull(),
+  fileSize: integer('filesize').notNull(),
+  timestamp: timestamp('timestamp').notNull().defaultNow(),
 })

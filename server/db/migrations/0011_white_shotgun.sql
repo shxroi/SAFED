@@ -1,0 +1,1 @@
+ALTER TABLE "operationjoblists" ADD COLUMN "documentationrequired" boolean DEFAULT false NOT NULL;

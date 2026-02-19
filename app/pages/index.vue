@@ -61,7 +61,7 @@ const handleSubmit = async () => {
   }
 
   if (!trimmedPassword) {
-    fieldErrors.value.password = 'Password is requiered'
+    fieldErrors.value.password = 'Password is required'
   }
 
   if (fieldErrors.value.username || fieldErrors.value.password) {

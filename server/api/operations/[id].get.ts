@@ -1,9 +1,16 @@
 import { db } from '../../utils/baseDb'
 import { operations, operationsEnroll, users } from '../../db/schema'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   try {
+    const session = await getUserSession(event)
+    const sessionUser = session?.user as { id?: number | string; roles?: string } | undefined
+
+    if (!sessionUser?.id) {
+      throw createError({ statusCode: 401, message: 'Unauthorized' })
+    }
+
     const idParam = getRouterParam(event, 'id')
 
     if (!idParam) {
@@ -21,6 +28,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    const userId = Number(sessionUser.id)
+
     // Get operation
     const [operation] = await db
       .select()
@@ -32,6 +41,18 @@ export default defineEventHandler(async (event) => {
         statusCode: 404,
         message: 'Operation not found',
       })
+    }
+
+    if (sessionUser.roles === 'STAFF') {
+      const [userEnrollment] = await db
+        .select({ id: operationsEnroll.id })
+        .from(operationsEnroll)
+        .where(and(eq(operationsEnroll.operationId, id), eq(operationsEnroll.userId, userId)))
+        .limit(1)
+
+      if (!userEnrollment) {
+        throw createError({ statusCode: 403, message: 'Forbidden' })
+      }
     }
 
     // Get enrollments with user details
