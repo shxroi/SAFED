@@ -42,6 +42,18 @@ const galleryInputId = computed(() => `doc-gallery-${props.activity.id}`);
 
 const showDocOptions = ref(false);
 
+const executorInitials = computed(() => {
+  const rawName = props.activity.executedByName?.trim();
+  if (!rawName) return "CN";
+
+  const nameParts = rawName.split(/\s+/).filter(Boolean);
+  if (nameParts.length === 1) {
+    return (nameParts[0] || "").slice(0, 2).toUpperCase();
+  }
+
+  return `${nameParts[0]?.[0] || ""}${nameParts[1]?.[0] || ""}`.toUpperCase();
+});
+
 const formatFileSize = (bytes: number): string => {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -61,7 +73,7 @@ const onFilesPicked = (event: Event): void => {
   <div class="mb-3 rounded-lg border border-gray-200 bg-white p-4">
     <div v-if="!props.editable" class="mb-3 flex items-start justify-between">
       <div class="flex items-center gap-2 text-xs text-gray-500">
-        <span class="rounded bg-gray-100 px-1 font-bold">CN</span>
+        <span class="rounded bg-gray-100 px-1 font-bold">{{ executorInitials }}</span>
         <span>{{ props.activity.executedByName || "Unknown Staff" }}</span>
       </div>
       <Badge
@@ -127,70 +139,74 @@ const onFilesPicked = (event: Event): void => {
     />
 
     <div v-if="props.editable" class="mb-4 space-y-3">
-      <div class="flex items-center justify-between">
+      <div class="flex items-center justify-end">
         <span
-          v-if="!props.activity.documentationRequired"
+          v-if="props.activity.documentationRequired"
           class="text-xs text-gray-500"
-          >Documentation optional</span
         >
-        <span class="text-xs text-gray-500"
-          >Max {{ props.maxDocsPerTask }} photos</span
+          Max {{ props.maxDocsPerTask }} photos
+        </span>
+        <span
+          v-else
+          class="text-xs text-gray-400"
         >
+          Documentation upload disabled for this task
+        </span>
       </div>
 
-      <Button
-        type="button"
-        variant="outline"
-        :disabled="props.isUploading || props.remainingSlots === 0"
-        class="w-full gap-2"
-        :aria-expanded="showDocOptions"
-        aria-label="Open documentation upload options"
-        @click="showDocOptions = !showDocOptions"
-      >
-        <ImagePlus class="h-4 w-4" />
-        Upload documentation
-      </Button>
-
-      <div
-        v-if="showDocOptions"
-        class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
-        role="group"
-        aria-label="Documentation upload options"
-      >
-        <label
-          :for="cameraInputId"
-          class="flex cursor-pointer items-center gap-3 border-b border-gray-100 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100"
+      <template v-if="props.activity.documentationRequired">
+        <Button
+          type="button"
+          variant="outline"
+          :disabled="props.isUploading || props.remainingSlots === 0"
+          class="w-full gap-2"
+          :aria-expanded="showDocOptions"
+          aria-label="Open documentation upload options"
+          @click="showDocOptions = !showDocOptions"
         >
-          <Camera class="h-5 w-5 text-gray-500" />
-          Take Photo
-        </label>
-        <label
-          :for="galleryInputId"
-          class="flex cursor-pointer items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100"
-        >
-          <Images class="h-5 w-5 text-gray-500" />
-          Choose from Gallery
-        </label>
-      </div>
+          <ImagePlus class="h-4 w-4" />
+          Upload documentation
+        </Button>
 
-      <!-- Camera input -->
-      <input
-        :id="cameraInputId"
-        type="file"
-        accept="image/*"
-        capture="environment"
-        class="hidden"
-        @change="onFilesPicked"
-      />
-      <!-- Gallery input -->
-      <input
-        :id="galleryInputId"
-        type="file"
-        accept="image/*"
-        multiple
-        class="hidden"
-        @change="onFilesPicked"
-      />
+        <div
+          v-if="showDocOptions"
+          class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+          role="group"
+          aria-label="Documentation upload options"
+        >
+          <label
+            :for="cameraInputId"
+            class="flex cursor-pointer items-center gap-3 border-b border-gray-100 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100"
+          >
+            <Camera class="h-5 w-5 text-gray-500" />
+            Take Photo
+          </label>
+          <label
+            :for="galleryInputId"
+            class="flex cursor-pointer items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100"
+          >
+            <Images class="h-5 w-5 text-gray-500" />
+            Choose from Gallery
+          </label>
+        </div>
+
+        <input
+          :id="cameraInputId"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          class="hidden"
+          @change="onFilesPicked"
+        />
+        <input
+          :id="galleryInputId"
+          type="file"
+          accept="image/*"
+          multiple
+          class="hidden"
+          @change="onFilesPicked"
+        />
+      </template>
     </div>
 
     <div v-if="props.visibleDocs.length > 0" class="mb-4">

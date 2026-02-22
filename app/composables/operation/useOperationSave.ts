@@ -100,6 +100,13 @@ export const useOperationSave = ({
     if (isReadOnly.value || Number.isNaN(operationId.value) || operationId.value < 1)
       return;
 
+    const hasMissingPreCondition = tools.value.some((tool) => !tool.preStatus);
+
+    if (hasMissingPreCondition) {
+      toast.error("Please select pre condition for all tools before saving");
+      return;
+    }
+
     saving.value = true;
     try {
       await $fetch(`/api/operations/${operationId.value}/tools`, {
@@ -126,6 +133,11 @@ export const useOperationSave = ({
   const saveActivity = async (activity: OperationActivity): Promise<void> => {
     if (isReadOnly.value || Number.isNaN(operationId.value) || operationId.value < 1)
       return;
+
+    if (!activity.status) {
+      toast.error("Please select task condition before saving");
+      return;
+    }
 
     const pendingDocs = pendingDocumentationByTask.value[activity.id] || [];
     const deletedDocIds = deletedDocumentationByTask.value[activity.id] || [];

@@ -140,6 +140,11 @@ const handleDocumentationFiles = async (
 
   if (files.length === 0) return;
 
+  if (!activity.documentationRequired) {
+    toast.error("Documentation is not required for this task");
+    return;
+  }
+
   const remainingSlots = getRemainingDocumentationSlots(activity);
   if (remainingSlots <= 0) {
     toast.error(`Maximum ${MAX_DOCS_PER_TASK} photos allowed per task`);

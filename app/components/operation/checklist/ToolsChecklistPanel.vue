@@ -142,7 +142,7 @@ const onNoteUpdate = (
         </div>
 
         <Textarea
-          v-if="tool.postStatus === 'Not Good' && props.editable"
+          v-if="props.editable && !!tool.postStatus"
           :model-value="tool.postNote || ''"
           placeholder="Type post-condition note"
           class="bg-white"
@@ -151,7 +151,7 @@ const onNoteUpdate = (
           "
         />
         <p
-          v-else-if="tool.postStatus === 'Not Good' && tool.postNote"
+          v-else-if="tool.postNote"
           class="rounded bg-gray-50 p-2 text-sm italic text-gray-600"
         >
           {{ tool.postNote }}
