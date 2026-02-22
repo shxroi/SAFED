@@ -110,8 +110,8 @@ const activeFilterCount = computed(() => {
       Operation List
     </h1>
 
-    <div class="flex flex-wrap items-center gap-3">
-      <div class="relative w-64">
+    <div class="flex w-full flex-wrap items-center gap-3 md:w-auto md:justify-end">
+      <div class="relative w-full sm:w-80">
         <Search
           class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
         />
@@ -119,6 +119,7 @@ const activeFilterCount = computed(() => {
           :model-value="props.search"
           placeholder="Search operations..."
           class="rounded-md border-gray-300 pl-10 focus-visible:ring-gray-400"
+          aria-label="Search operations"
           @update:model-value="
             (value) => emit('update:search', String(value || ''))
           "
@@ -127,7 +128,12 @@ const activeFilterCount = computed(() => {
 
       <Popover v-model:open="open">
         <PopoverTrigger as-child>
-          <Button variant="outline" class="relative gap-2">
+          <Button
+            variant="outline"
+            class="relative w-full gap-2 sm:w-auto"
+            aria-label="Open operation filters"
+            :aria-expanded="open"
+          >
             <Filter class="h-4 w-4" />
             Filter
             <ChevronDown class="h-3.5 w-3.5 text-gray-400" />
@@ -150,12 +156,14 @@ const activeFilterCount = computed(() => {
             <span class="text-sm font-semibold text-slate-800"
               >Filter Operations</span
             >
-            <button
-              class="text-xs text-slate-400 hover:text-slate-700"
+            <Button
+              variant="ghost"
+              size="sm"
+              class="h-auto px-1 py-0 text-xs text-slate-500 hover:text-slate-700"
               @click="clearAll"
             >
               Clear all
-            </button>
+            </Button>
           </div>
 
           <div class="max-h-[70vh] space-y-6 overflow-y-auto p-4">
@@ -246,7 +254,12 @@ const activeFilterCount = computed(() => {
         </PopoverContent>
       </Popover>
 
-      <Button v-if="props.isIM" class="gap-2" @click="emit('create')">
+      <Button
+        v-if="props.isIM"
+        class="w-full gap-2 sm:w-auto"
+        aria-label="Create new operation"
+        @click="emit('create')"
+      >
         <Plus class="h-4 w-4" />
         New Operation
       </Button>

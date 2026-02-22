@@ -89,13 +89,6 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, message: "Operation not found" });
     }
 
-    if (operation.status !== "Draft") {
-      throw createError({
-        statusCode: 400,
-        message: "Only draft operations can update checklist",
-      });
-    }
-
     const normalizedTools = rawTools
       .map((tool) => ({
         toolId: normalizeToolId(tool.toolId),

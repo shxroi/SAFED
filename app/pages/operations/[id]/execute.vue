@@ -34,6 +34,7 @@ import OperationActivityCard from "~/components/operation/checklist/OperationAct
 import OperationSectionsChecklist from "~/components/operation/checklist/OperationSectionsChecklist.vue";
 import ToolsChecklistPanel from "~/components/operation/checklist/ToolsChecklistPanel.vue";
 import OperationInfoCard from "~/components/operation/OperationInfoCard.vue";
+import { useAuth } from "~/composables/Auth";
 import { useOperationAccess } from "~/composables/operation/useOperationAccess";
 import { useExecutionDocumentation } from "~/composables/operation/useExecutionDocumentation";
 import { useOperationDetail } from "~/composables/operation/useOperationDetail";
@@ -44,7 +45,7 @@ import { useOperationSave } from "~/composables/operation/useOperationSave";
 const MAX_DOCS_PER_TASK = 2;
 
 const route = useRoute();
-const { user } = useUserSession();
+const { user } = useAuth();
 
 const operationId = computed(() => Number(route.params.id));
 
@@ -199,9 +200,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 pb-48">
+  <div class="min-h-screen bg-gray-50 pb-36 md:pb-24">
     <div class="bg-white border-b border-gray-200 sticky top-0 z-10">
-      <div class="px-4 py-4">
+      <div class="mx-auto max-w-7xl px-4 py-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
             <Button
@@ -232,7 +233,7 @@ onMounted(async () => {
       ></div>
     </div>
 
-    <div v-else-if="operation && !isReadOnly" class="p-4">
+    <div v-else-if="operation && !isReadOnly" class="mx-auto max-w-7xl p-4 md:p-6 lg:p-8">
       <OperationInfoCard
         :operation="operation"
         :progress="calculateProgress"
@@ -244,10 +245,10 @@ onMounted(async () => {
       <Card class="border border-gray-200 shadow-sm mb-6">
         <CardContent class="p-0">
           <div
-            class="p-4 border-b border-gray-200 flex justify-between items-center"
+            class="flex flex-col gap-3 border-b border-gray-200 p-4 sm:flex-row sm:items-center sm:justify-between"
           >
             <h3 class="font-semibold text-gray-900">Checklist</h3>
-            <div class="flex bg-gray-100 rounded-lg p-1">
+            <div class="grid grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1">
               <Button
                 variant="ghost"
                 size="sm"
@@ -257,6 +258,7 @@ onMounted(async () => {
                     ? 'bg-white shadow-sm font-medium'
                     : 'text-gray-500',
                 ]"
+                aria-label="Open tools checklist"
                 @click="activeTab = 'tools'"
               >
                 Tools
@@ -270,6 +272,7 @@ onMounted(async () => {
                     ? 'bg-white shadow-sm font-medium'
                     : 'text-gray-500',
                 ]"
+                aria-label="Open operation checklist"
                 @click="activeTab = 'operation'"
               >
                 Operation
@@ -327,12 +330,12 @@ onMounted(async () => {
       </Card>
 
       <div
-        class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50"
+        class="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white p-4"
       >
         <Button
           v-if="isSupervisor"
           variant="outline"
-          class="w-full border-slate-900 text-slate-900 hover:bg-slate-50 h-12"
+          class="mx-auto h-12 w-full max-w-7xl border-slate-900 text-slate-900 hover:bg-slate-50"
           :disabled="operation.status === 'Complete'"
           @click="showFinishDialog = true"
         >
@@ -341,25 +344,23 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div v-else-if="operation && isReadOnly" class="p-8 max-w-7xl mx-auto">
-      <div class="grid grid-cols-12 gap-8">
+    <div v-else-if="operation && isReadOnly" class="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
+      <div class="grid grid-cols-1 gap-6 lg:gap-8">
         <div class="col-span-12">
           <Card class="mb-6">
-            <CardHeader class="flex flex-row items-center justify-between">
+            <CardHeader class="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
               <div class="flex items-center gap-2">
                 <div class="p-2 bg-gray-100 rounded-lg">
-                  <Download class="w-5 h-5 text-gray-600" />
+                  <Download class="h-5 w-5 text-gray-600" aria-hidden="true" />
                 </div>
                 <CardTitle class="text-base font-medium"
                   >{{ operation.type }} - {{ operationTitle }}</CardTitle
                 >
               </div>
-              <Download
-                class="w-5 h-5 text-gray-400 cursor-pointer hover:text-gray-600"
-              />
+              <Download class="h-5 w-5 text-gray-400" aria-hidden="true" />
             </CardHeader>
             <CardContent>
-              <div class="grid grid-cols-2 gap-8 mb-6">
+              <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-8">
                 <div class="space-y-3 text-sm">
                   <div class="flex gap-2">
                     <MapPin class="w-4 h-4 text-gray-400" />
@@ -400,52 +401,56 @@ onMounted(async () => {
         </div>
 
         <div class="col-span-12">
-          <div class="flex justify-between items-center mb-4">
+          <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 class="text-xl font-bold">Checklist</h2>
-            <div class="bg-gray-100 p-1 rounded-lg inline-flex">
+            <div class="bg-gray-100 p-1 rounded-lg inline-flex"> 
               <Button
                 variant="ghost"
                 size="sm"
                 :class="[
-                  'text-xs rounded-md',
-                  monitorTab === 'operation'
+                  'text-xs rounded-md hover:bg-white',
+                  monitorTab === 'tools'
                     ? 'bg-white shadow-sm font-medium'
-                    : 'text-gray-500',
+                    : 'text-gray-500 hover:bg-gray-50',
                 ]"
-                @click="monitorTab = 'operation'"
+                aria-label="Show tools checklist"
+                @click="monitorTab = 'tools'"
               >
-                Operation
+                Tools
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 :class="[
-                  'text-xs rounded-md',
-                  monitorTab === 'tools'
+                  'text-xs rounded-md hover:bg-white',
+                  monitorTab === 'operation'
                     ? 'bg-white shadow-sm font-medium'
-                    : 'text-gray-500',
+                    : 'text-gray-500 hover:bg-gray-50',
                 ]"
-                @click="monitorTab = 'tools'"
+                aria-label="Show operation checklist"
+                @click="monitorTab = 'operation'"
               >
-                Tools
+                Operation
               </Button>
             </div>
           </div>
 
           <div
             v-if="monitorTab === 'operation'"
-            class="grid grid-cols-12 gap-6"
+            class="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-6"
           >
-            <div class="col-span-3 space-y-2">
-              <div
+            <div class="space-y-2 lg:col-span-3">
+              <button
                 v-for="section in sections"
                 :key="section.id"
+                type="button"
                 :class="[
-                  'p-3 rounded-lg cursor-pointer text-sm font-medium transition-colors',
+                  'w-full rounded-lg p-3 text-left text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-slate-800',
                   selectedSectionId === section.id
                     ? 'bg-slate-100 text-slate-900 border border-slate-200'
                     : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50',
                 ]"
+                :aria-pressed="selectedSectionId === section.id"
                 @click="selectedSectionId = section.id"
               >
                 <div class="flex justify-between items-center">
@@ -456,10 +461,10 @@ onMounted(async () => {
                   />
                   <ChevronDown v-else class="w-4 h-4 text-gray-900" />
                 </div>
-              </div>
+              </button>
             </div>
 
-            <div class="col-span-9">
+            <div class="lg:col-span-9">
               <Card v-if="selectedSection">
                 <CardHeader>
                   <CardTitle class="text-lg">{{

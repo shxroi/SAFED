@@ -62,12 +62,12 @@ export default defineEventHandler(async (event) => {
         });
       }
 
-      if (operation.status !== "Draft") {
-        throw createError({
-          statusCode: 400,
-          message: "Only draft operations can be deleted",
-        });
-      }
+      // if (operation.status !== "Draft") {
+      //   throw createError({
+      //     statusCode: 400,
+      //     message: "Only draft operations can be deleted",
+      //   });
+      // }
 
       const operationTasks = await tx
         .select({ id: operationJobLists.id })

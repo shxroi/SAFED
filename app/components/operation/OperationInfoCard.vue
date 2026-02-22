@@ -23,8 +23,8 @@ const title = computed(() =>
 <template>
   <Card class="border border-gray-200 shadow-sm">
     <CardContent class="p-4">
-      <div class="mb-4">
-        <h2 class="font-semibold text-lg text-gray-900 mb-2">{{ title }}</h2>
+      <div class="mb-4 min-w-0">
+        <h2 class="mb-2 break-words text-lg font-semibold text-gray-900">{{ title }}</h2>
         <div class="flex items-center gap-2 flex-wrap">
           <Badge
             :class="getTypeColor(operation.type)"
@@ -43,15 +43,15 @@ const title = computed(() =>
         </div>
       </div>
 
-      <div class="space-y-2 text-sm text-gray-600 mb-4">
+      <div class="mb-4 space-y-2 text-sm text-gray-700">
         <div class="flex items-center gap-2">
           <MapPin class="h-4 w-4 text-gray-400 shrink-0" />
-          <span>{{ operation.location }}</span>
+          <span class="break-words">{{ operation.location }}</span>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <Calendar class="h-4 w-4 text-gray-400 shrink-0" />
           <span>{{ formattedDate }}</span>
-          <span v-if="daysLeft !== null" class="ml-auto text-xs text-gray-400">
+          <span v-if="daysLeft !== null" class="ml-auto text-xs text-gray-600">
             {{ daysLeft }} days left
           </span>
         </div>
