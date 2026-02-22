@@ -91,10 +91,6 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 404, message: 'Operation not found' })
       }
 
-      if (existingOperation.status !== 'Draft') {
-        throw createError({ statusCode: 400, message: 'Only draft operations can be edited' })
-      }
-
       const [updated] = await tx
         .update(operations)
         .set({

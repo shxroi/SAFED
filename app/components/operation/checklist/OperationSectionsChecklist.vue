@@ -66,7 +66,8 @@ const isUploading = (taskId: number): boolean =>
       <CollapsibleTrigger as-child>
         <Button
           variant="ghost"
-          class="w-full justify-between p-4 h-auto bg-slate-50 border border-gray-200 rounded-lg hover:bg-slate-100 mb-2"
+          class="mb-2 h-auto w-full justify-between rounded-lg border border-gray-200 bg-slate-50 p-4 text-left hover:bg-slate-100"
+          :aria-label="`Toggle section ${section.name}`"
         >
           <span class="font-medium text-gray-900">{{ section.name }}</span>
           <ChevronDown

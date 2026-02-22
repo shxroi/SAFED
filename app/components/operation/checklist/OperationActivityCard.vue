@@ -83,7 +83,7 @@ const onFilesPicked = (event: Event): void => {
       {{ props.activity.jobDescription }}
     </p>
 
-    <div v-if="props.editable" class="mb-4 flex items-center justify-between">
+    <div v-if="props.editable" class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <span class="text-sm font-medium text-gray-700">Condition</span>
       <div class="flex gap-2">
         <Button
@@ -92,6 +92,7 @@ const onFilesPicked = (event: Event): void => {
           :class="
             props.activity.status === 'Good' ? 'ring-2 ring-green-500' : ''
           "
+          aria-label="Mark condition good"
           @click="emit('set-status', 'Good')"
         >
           <Check class="h-4 w-4" />
@@ -102,6 +103,7 @@ const onFilesPicked = (event: Event): void => {
           :class="
             props.activity.status === 'Not Good' ? 'ring-2 ring-red-500' : ''
           "
+          aria-label="Mark condition not good"
           @click="emit('set-status', 'Not Good')"
         >
           <X class="h-4 w-4" />
@@ -141,6 +143,8 @@ const onFilesPicked = (event: Event): void => {
         variant="outline"
         :disabled="props.isUploading || props.remainingSlots === 0"
         class="w-full gap-2"
+        :aria-expanded="showDocOptions"
+        aria-label="Open documentation upload options"
         @click="showDocOptions = !showDocOptions"
       >
         <ImagePlus class="h-4 w-4" />
@@ -150,6 +154,8 @@ const onFilesPicked = (event: Event): void => {
       <div
         v-if="showDocOptions"
         class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+        role="group"
+        aria-label="Documentation upload options"
       >
         <label
           :for="cameraInputId"
@@ -195,13 +201,14 @@ const onFilesPicked = (event: Event): void => {
           :key="doc.id"
           type="button"
           class="relative overflow-hidden rounded border border-gray-200 hover:opacity-90"
+          :aria-label="`Preview uploaded photo ${doc.fileName}`"
           @click="emit('open-preview', doc.filePath, doc.fileName)"
         >
           <NuxtImg
             :src="doc.filePath"
             alt="Documentation preview"
             width="200"
-            height="140"
+            height="150"
             format="webp"
             loading="lazy"
             class="h-24 w-full object-cover"
@@ -264,6 +271,7 @@ const onFilesPicked = (event: Event): void => {
           <button
             type="button"
             class="w-full"
+            :aria-label="`Preview pending photo ${pendingDoc.file.name}`"
             @click="
               emit(
                 'open-preview',
@@ -289,6 +297,7 @@ const onFilesPicked = (event: Event): void => {
           <button
             type="button"
             class="absolute right-1 top-1 rounded bg-white/90 px-1 text-xs text-red-600"
+            :aria-label="`Remove pending photo ${pendingDoc.file.name}`"
             @click="emit('remove-pending', pendingDoc.id)"
           >
             Remove
