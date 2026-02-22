@@ -89,7 +89,7 @@ const currentSection = computed(
                 <div class="flex items-center space-x-3">
                   <Switch
                     :id="`switch-${props.selectedSection}-${moduleIndex}-${activityIndex}`"
-                    v-model:checked="activity.documentationRequired"
+                    v-model:model-value="activity.documentationRequired"
                   />
                   <Label
                     :for="`switch-${props.selectedSection}-${moduleIndex}-${activityIndex}`"

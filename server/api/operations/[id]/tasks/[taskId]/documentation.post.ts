@@ -76,7 +76,10 @@ export default defineEventHandler(async (event) => {
     }
 
     const [task] = await db
-      .select({ id: operationJobLists.id })
+      .select({
+        id: operationJobLists.id,
+        documentationRequired: operationJobLists.documentationRequired,
+      })
       .from(operationJobLists)
       .where(
         and(
@@ -88,6 +91,13 @@ export default defineEventHandler(async (event) => {
 
     if (!task) {
       throw createError({ statusCode: 404, message: "Task not found" });
+    }
+
+    if (!task.documentationRequired) {
+      throw createError({
+        statusCode: 400,
+        message: "Documentation is not required for this task",
+      });
     }
 
     const formData = await readMultipartFormData(event);

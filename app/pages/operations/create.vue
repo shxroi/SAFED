@@ -1,6 +1,5 @@
 ﻿<script lang="ts" setup>
 import { computed, onMounted, ref, watch } from "vue";
-import { toast } from "vue-sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DeleteConfimDialog from "@/components/DeleteConfimDialog.vue";
@@ -34,12 +33,10 @@ const {
   selectedSection,
   createEmptySection,
   mapChecklistSections,
-  addTool,
-  removeTool,
-  incrementQuantity,
-  decrementQuantity,
+  toggleToolSelection,
+  incrementToolById,
+  decrementToolById,
   addSection,
-  removeSection,
   selectSection,
   addModule,
   removeModule,
@@ -144,10 +141,9 @@ watch(
                 :tools-list="toolsList"
                 :tool-options="toolOptions"
                 :submitting="submitting"
-                @add-tool="addTool"
-                @remove-tool="removeTool"
-                @increment="incrementQuantity"
-                @decrement="decrementQuantity"
+                @toggle-tool="toggleToolSelection"
+                @increment-tool="incrementToolById"
+                @decrement-tool="decrementToolById"
                 @save="() => handleSubmit('Draft', false)"
               />
             </CardContent>

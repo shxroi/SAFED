@@ -14,6 +14,16 @@ type ToolUpdateInput = {
   postNote?: string | null;
 };
 
+const isChecklistStatus = (status: unknown): status is "Good" | "Not Good" => {
+  return status === "Good" || status === "Not Good";
+};
+
+const isNullableChecklistStatus = (
+  status: unknown,
+): status is "Good" | "Not Good" | null | undefined => {
+  return status === null || status === undefined || isChecklistStatus(status);
+};
+
 export default defineEventHandler(async (event) => {
   try {
     const session = await getUserSession(event);
@@ -94,20 +104,22 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const validStatus = new Set(["Good", "Not Good", null, undefined]);
-
     // Update each tool's status
     for (const tool of tools) {
       if (!tool.id || Number.isNaN(Number(tool.id)) || Number(tool.id) < 1)
         continue;
 
-      if (
-        !validStatus.has(tool.preStatus) ||
-        !validStatus.has(tool.postStatus)
-      ) {
+      if (!isChecklistStatus(tool.preStatus)) {
         throw createError({
           statusCode: 400,
-          message: "Invalid tool status value",
+          message: "Pre condition is required for all tools",
+        });
+      }
+
+      if (!isNullableChecklistStatus(tool.postStatus)) {
+        throw createError({
+          statusCode: 400,
+          message: "Invalid post condition value",
         });
       }
 
