@@ -77,3 +77,26 @@ export const fieldDocumentations = pgTable('fielddocumentations', {
   fileSize: integer('filesize').notNull(),
   timestamp: timestamp('timestamp').notNull().defaultNow(),
 })
+
+export const fieldReports = pgTable('fieldreports', {
+  id: serial('id').primaryKey(),
+  operationId: integer('operationid').notNull().references(() => operations.id).unique(),
+  summary: text('summary').notNull().default(''),
+  recommendation: text('recommendation').notNull().default(''),
+  pdfPath: varchar('pdfpath', { length: 255 }).notNull(),
+  generatedBy: integer('generatedby').notNull().references(() => users.id),
+  generatedAt: timestamp('generatedat').notNull().defaultNow(),
+})
+
+export const fieldReportNotes = pgTable('fieldreportnotes', {
+  id: serial('id').primaryKey(),
+  reportId: integer('reportid').notNull().references(() => fieldReports.id),
+  note: text('note').notNull(),
+  createdAt: timestamp('createdat').notNull().defaultNow(),
+})
+
+export const fieldReportNoteDocumentations = pgTable('fieldreportnotedocumentations', {
+  id: serial('id').primaryKey(),
+  noteId: integer('noteid').notNull().references(() => fieldReportNotes.id),
+  documentationId: integer('documentationid').notNull().references(() => fieldDocumentations.id),
+})

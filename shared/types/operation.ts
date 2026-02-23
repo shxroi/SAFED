@@ -24,6 +24,7 @@ export interface Operation {
   staffNames?: string[]
   isEnrolled?: boolean
   enrollments?: OperationEnrollment[]
+  reportPdfPath?: string | null
 }
 
 export interface OperationEnrollment {

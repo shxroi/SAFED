@@ -200,7 +200,7 @@ export const useOperationSave = ({
         method: "POST",
       });
       toast.success("Operation completed successfully");
-      await navigateTo("/operations");
+      await navigateTo(`/operations/${operationId.value}/report`);
     } catch (err: unknown) {
       toast.error(extractErrorMessage(err, "Failed to finish operation"));
     } finally {
