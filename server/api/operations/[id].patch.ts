@@ -1,9 +1,6 @@
 import { db } from '../../utils/baseDb'
-import { operations, operationsEnroll, users } from '../../db/schema'
-import { and, eq } from 'drizzle-orm'
-import { sendOperationScheduleEmail } from '../../utils/operationScheduleEmail'
-
-const EMAIL_COOLDOWN_MS = 30 * 60 * 1000
+import { operations } from '../../db/schema'
+import { eq } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -79,59 +76,10 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const shouldSendScheduleEmail =
-      status === 'Active' &&
-      operation.status !== 'Active' &&
-      (!operation.scheduleEmailLastSentAt ||
-        Date.now() - operation.scheduleEmailLastSentAt.getTime() > EMAIL_COOLDOWN_MS)
-
-    let scheduleEmailMessage: string | null = null
-    let scheduleEmailSent = false
-
-    if (shouldSendScheduleEmail) {
-      const [enrolledUsers, observerUsers] = await Promise.all([
-        db
-          .select({ email: users.email })
-          .from(operationsEnroll)
-          .innerJoin(users, eq(operationsEnroll.userId, users.id))
-          .where(eq(operationsEnroll.operationId, id)),
-        db
-          .select({ email: users.email })
-          .from(users)
-          .where(and(eq(users.roles, 'OBSERVER'), eq(users.isActive, true))),
-      ])
-
-      const recipients = [
-        ...new Set([...enrolledUsers, ...observerUsers].map((user) => user.email).filter(Boolean)),
-      ]
-
-      const emailResult = await sendOperationScheduleEmail({
-        recipients,
-        operation: {
-          id: operation.id,
-          company: operation.company,
-          vesselName: operation.vesselName,
-          type: operation.type,
-          location: operation.location,
-          date: operation.date,
-        },
-      })
-
-      if (emailResult.sent) {
-        scheduleEmailSent = true
-        scheduleEmailMessage = 'Schedule email sent'
-      } else {
-        scheduleEmailMessage = `Schedule email skipped: ${emailResult.reason || 'Unknown reason'}`
-      }
-    }
-
     // Update status
     const [updatedOperation] = await db
       .update(operations)
-      .set({
-        status,
-        scheduleEmailLastSentAt: scheduleEmailSent ? new Date() : operation.scheduleEmailLastSentAt,
-      })
+      .set({ status })
       .where(eq(operations.id, id))
       .returning()
 
@@ -139,7 +87,6 @@ export default defineEventHandler(async (event) => {
       success: true,
       operation: updatedOperation,
       message: `Operation ${status.toLowerCase()} successfully`,
-      notification: scheduleEmailMessage,
     }
   } catch (error: any) {
     if (error.statusCode) throw error

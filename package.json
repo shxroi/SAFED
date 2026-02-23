@@ -29,7 +29,6 @@
     "lucide-vue-next": "^0.563.0",
     "nuxt": "^4.3.0",
     "nuxt-auth-utils": "^0.5.28",
-    "nodemailer": "^7.0.7",
     "postgres": "^3.4.8",
     "reka-ui": "^2.8.0",
     "shadcn-nuxt": "^2.4.3",
