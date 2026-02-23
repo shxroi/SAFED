@@ -221,3 +221,23 @@
 - Verification:
   - `npm run test` (pass)
   - `npm run build` (pass)
+
+
+## 2026-02-23 (Operation schedule email notifications)
+
+- Added schedule email tracking field in `server/db/schema.ts`:
+  - `operations.scheduleEmailLastSentAt`
+- Added migration `server/db/migrations/0012_schedule_email_tracking.sql` and updated migration journal.
+- Added SMTP-based sender utility `server/utils/operationScheduleEmail.ts` using `nodemailer`.
+- Updated operation status update API `server/api/operations/[id].patch.ts`:
+  - sends schedule email when operation transitions to `Active`
+  - recipients include assigned users (enrolled supervisor/staff) and active observers
+  - applies anti-spam cooldown (30 minutes) using `scheduleEmailLastSentAt`
+  - never sends while operation remains `Draft`
+  - returns notification status in response (`sent` or skipped reason)
+- Added SMTP env template keys in `env.example`.
+- Added dependency `nodemailer` in `package.json` (+ lockfile updates).
+- Verification:
+  - `corepack pnpm test` (pass)
+  - `npx tsc --noEmit` (pass)
+  - `corepack pnpm build` (fails on pre-existing migration issue: `0004_parallel_wallop.sql` relation `operationenroll` does not exist)

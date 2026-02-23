@@ -30,6 +30,7 @@ export const operations = pgTable('operations', {
   location: varchar('location', { length: 100 }).notNull(),
   date: timestamp('date').notNull(),
   status: operationStatusEnum('status').notNull().default('Draft'),
+  scheduleEmailLastSentAt: timestamp('scheduleemaillastsentat'),
   createdAt: timestamp('createdat').notNull().defaultNow(),
 })
 
