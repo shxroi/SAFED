@@ -1,4 +1,4 @@
-import nodemailer, { type Transporter } from 'nodemailer'
+import nodemailer from 'nodemailer'
 
 interface OperationScheduleEmailInput {
   recipients: string[]
@@ -12,37 +12,7 @@ interface OperationScheduleEmailInput {
   }
 }
 
-interface SmtpConfig {
-  host: string
-  port: number
-  secure: boolean
-  auth: {
-    user: string
-    pass: string
-  }
-  from: string
-}
-
-const DEFAULT_OPERATION_SCHEDULE_EMAIL_COOLDOWN_MS = 30 * 60 * 1000
-
-const transporterCache: {
-  transporter: Transporter | null
-  configKey: string | null
-} = {
-  transporter: null,
-  configKey: null,
-}
-
-export const getOperationScheduleEmailCooldownMs = (): number => {
-  const configured = Number(process.env.OPERATION_SCHEDULE_EMAIL_COOLDOWN_MS)
-  if (Number.isFinite(configured) && configured > 0) {
-    return configured
-  }
-
-  return DEFAULT_OPERATION_SCHEDULE_EMAIL_COOLDOWN_MS
-}
-
-const getSmtpConfig = (): SmtpConfig | null => {
+const getSmtpConfig = () => {
   const host = process.env.SMTP_HOST
   const port = Number(process.env.SMTP_PORT || '587')
   const user = process.env.SMTP_USER
@@ -65,28 +35,6 @@ const getSmtpConfig = (): SmtpConfig | null => {
   }
 }
 
-const getCachedTransporter = (smtp: SmtpConfig): Transporter => {
-  const cacheKey = JSON.stringify({
-    host: smtp.host,
-    port: smtp.port,
-    secure: smtp.secure,
-    auth: smtp.auth,
-  })
-
-  if (!transporterCache.transporter || transporterCache.configKey !== cacheKey) {
-    transporterCache.transporter = nodemailer.createTransport({
-      host: smtp.host,
-      port: smtp.port,
-      secure: smtp.secure,
-      auth: smtp.auth,
-      pool: true,
-    })
-    transporterCache.configKey = cacheKey
-  }
-
-  return transporterCache.transporter
-}
-
 export const sendOperationScheduleEmail = async (
   input: OperationScheduleEmailInput,
 ): Promise<{ sent: boolean; reason?: string }> => {
@@ -99,13 +47,18 @@ export const sendOperationScheduleEmail = async (
     return { sent: false, reason: 'SMTP config is incomplete' }
   }
 
-  const transporter = getCachedTransporter(smtp)
+  const transporter = nodemailer.createTransport({
+    host: smtp.host,
+    port: smtp.port,
+    secure: smtp.secure,
+    auth: smtp.auth,
+  })
 
   const operationLabel = input.operation.vesselName
     ? `${input.operation.vesselName} - ${input.operation.company}`
     : input.operation.company
 
-  const dateLabel = input.operation.date.toLocaleString('en-US')
+  const dateLabel = input.operation.date.toISOString()
 
   await transporter.sendMail({
     from: smtp.from,

@@ -1,10 +1,9 @@
 import { db } from '../../utils/baseDb'
 import { operations, operationsEnroll, users } from '../../db/schema'
 import { and, eq } from 'drizzle-orm'
-import {
-  getOperationScheduleEmailCooldownMs,
-  sendOperationScheduleEmail,
-} from '../../utils/operationScheduleEmail'
+import { sendOperationScheduleEmail } from '../../utils/operationScheduleEmail'
+
+const EMAIL_COOLDOWN_MS = 30 * 60 * 1000
 
 export default defineEventHandler(async (event) => {
   try {
@@ -84,7 +83,7 @@ export default defineEventHandler(async (event) => {
       status === 'Active' &&
       operation.status !== 'Active' &&
       (!operation.scheduleEmailLastSentAt ||
-        Date.now() - operation.scheduleEmailLastSentAt.getTime() > getOperationScheduleEmailCooldownMs())
+        Date.now() - operation.scheduleEmailLastSentAt.getTime() > EMAIL_COOLDOWN_MS)
 
     let scheduleEmailMessage: string | null = null
     let scheduleEmailSent = false
@@ -106,28 +105,23 @@ export default defineEventHandler(async (event) => {
         ...new Set([...enrolledUsers, ...observerUsers].map((user) => user.email).filter(Boolean)),
       ]
 
-      try {
-        const emailResult = await sendOperationScheduleEmail({
-          recipients,
-          operation: {
-            id: operation.id,
-            company: operation.company,
-            vesselName: operation.vesselName,
-            type: operation.type,
-            location: operation.location,
-            date: operation.date,
-          },
-        })
+      const emailResult = await sendOperationScheduleEmail({
+        recipients,
+        operation: {
+          id: operation.id,
+          company: operation.company,
+          vesselName: operation.vesselName,
+          type: operation.type,
+          location: operation.location,
+          date: operation.date,
+        },
+      })
 
-        if (emailResult.sent) {
-          scheduleEmailSent = true
-          scheduleEmailMessage = 'Schedule email sent'
-        } else {
-          scheduleEmailMessage = `Schedule email skipped: ${emailResult.reason || 'Unknown reason'}`
-        }
-      } catch (emailError: any) {
-        console.error('Error sending schedule email:', emailError)
-        scheduleEmailMessage = 'Schedule email skipped: transient send error'
+      if (emailResult.sent) {
+        scheduleEmailSent = true
+        scheduleEmailMessage = 'Schedule email sent'
+      } else {
+        scheduleEmailMessage = `Schedule email skipped: ${emailResult.reason || 'Unknown reason'}`
       }
     }
 
