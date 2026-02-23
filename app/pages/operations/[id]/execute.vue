@@ -182,6 +182,20 @@ const goBack = async (): Promise<void> => {
   await navigateTo("/operations");
 };
 
+const openReportPage = async (): Promise<void> => {
+  if (Number.isNaN(operationId.value) || operationId.value < 1) return;
+  await navigateTo(`/operations/${operationId.value}/report`);
+};
+
+const openReportPdf = (): void => {
+  const path = operation.value?.reportPdfPath;
+  if (!path) {
+    toast.error("Field report PDF is not available yet");
+    return;
+  }
+  window.open(path, "_blank", "noopener,noreferrer");
+};
+
 onMounted(async () => {
   if (Number.isNaN(operationId.value) || operationId.value < 1) {
     toast.error("Invalid operation ID");
@@ -362,7 +376,26 @@ onMounted(async () => {
                   >{{ operation.type }} - {{ operationTitle }}</CardTitle
                 >
               </div>
-              <Download class="h-5 w-5 text-gray-400" aria-hidden="true" />
+              <div class="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  class="gap-2"
+                  @click="openReportPage"
+                >
+                  Field Report
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  class="gap-2"
+                  :disabled="!operation.reportPdfPath"
+                  @click="openReportPdf"
+                >
+                  <Download class="h-4 w-4" />
+                  PDF
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-8">

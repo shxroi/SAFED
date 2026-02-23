@@ -334,3 +334,29 @@
 - Verification:
   - `corepack pnpm test` (pass)
   - `npm run build` (pass)
+
+## 2026-02-23 (Field report flow + PDF generation)
+
+- Added field report data model in `server/db/schema.ts`:
+  - `fieldreports`
+  - `fieldreportnotes`
+  - `fieldreportnotedocumentations`
+- Added migration `server/db/migrations/0012_field_reports.sql` and journal entry update.
+- Added report APIs:
+  - `server/api/operations/[id]/report.get.ts` for report + selectable documentation retrieval
+  - `server/api/operations/[id]/report.post.ts` for supervisor-only generate/regenerate flow
+- Added PDF generation utility `server/utils/reportPdf.ts` using `pdf-lib` and persisted PDF output under `public/uploads/operations/{id}/reports/`.
+- Added report UI page `app/pages/operations/[id]/report.vue` with:
+  - summary/recommendation fields
+  - note list
+  - multi-image documentation linkage per note
+  - preview panel
+  - regenerate support
+- Updated completion flow in `app/composables/operation/useOperationSave.ts` to route supervisor to report page after finish.
+- Updated read-only execute view `app/pages/operations/[id]/execute.vue` to expose `Field Report` and `PDF` actions for IM/Observer visibility.
+- Extended operation detail API/type (`server/api/operations/[id].get.ts`, `shared/types/operation.ts`) to expose `reportPdfPath`.
+- Added dependency `pdf-lib` in `package.json` (+ lockfile update).
+- Verification:
+  - `corepack pnpm test` (pass)
+  - `npx tsc --noEmit` (pass)
+  - `corepack pnpm build` (fails on pre-existing migration issue: `0004_parallel_wallop.sql` relation `operationenroll` does not exist)

@@ -1,5 +1,5 @@
 import { db } from '../../utils/baseDb'
-import { operations, operationsEnroll, users } from '../../db/schema'
+import { fieldReports, operations, operationsEnroll, users } from '../../db/schema'
 import { and, eq } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
@@ -31,17 +31,23 @@ export default defineEventHandler(async (event) => {
     const userId = Number(sessionUser.id)
 
     // Get operation
-    const [operation] = await db
-      .select()
+    const [operationRow] = await db
+      .select({
+        operation: operations,
+        reportPdfPath: fieldReports.pdfPath,
+      })
       .from(operations)
+      .leftJoin(fieldReports, eq(fieldReports.operationId, operations.id))
       .where(eq(operations.id, id))
 
-    if (!operation) {
+    if (!operationRow) {
       throw createError({
         statusCode: 404,
         message: 'Operation not found',
       })
     }
+
+    const operation = operationRow.operation
 
     if (sessionUser.roles === 'STAFF') {
       const [userEnrollment] = await db
@@ -77,6 +83,7 @@ export default defineEventHandler(async (event) => {
         ...operation,
         date: operation.date.toISOString(),
         createdAt: operation.createdAt.toISOString(),
+        reportPdfPath: operationRow.reportPdfPath,
         enrollments,
       },
     }
