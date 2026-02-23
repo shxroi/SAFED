@@ -63,7 +63,9 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    const canGenerate = userEnrollment?.operationRole === "SUPERVISOR";
+    const canGenerate =
+      userEnrollment?.operationRole === "SUPERVISOR" &&
+      operation.status === "Complete";
 
     const [report] = await db
       .select({

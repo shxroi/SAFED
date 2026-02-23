@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
@@ -27,6 +27,14 @@ const reportPayloadSchema = z.object({
     .max(30, "Too many notes")
     .default([]),
 });
+
+const toDiskPathFromPublicUploadPath = (
+  publicUploadPath: string,
+): string | null => {
+  if (!publicUploadPath.startsWith("/uploads/")) return null;
+  const relativePath = publicUploadPath.replace("/uploads/", "");
+  return join(process.cwd(), "public", "uploads", relativePath);
+};
 
 export default defineEventHandler(async (event) => {
   try {
@@ -165,97 +173,118 @@ export default defineEventHandler(async (event) => {
     await mkdir(reportDir, { recursive: true });
     await writeFile(diskPath, reportPdfBytes);
 
-    const reportId = await db.transaction(async (tx) => {
-      const [existingReport] = await tx
-        .select({ id: fieldReports.id })
-        .from(fieldReports)
-        .where(eq(fieldReports.operationId, operationId))
-        .limit(1);
+    const reportResult = await db
+      .transaction(async (tx) => {
+        const [existingReport] = await tx
+          .select({ id: fieldReports.id, pdfPath: fieldReports.pdfPath })
+          .from(fieldReports)
+          .where(eq(fieldReports.operationId, operationId))
+          .limit(1);
 
-      let activeReportId = existingReport?.id;
+        let activeReportId = existingReport?.id;
+        const previousPdfPath = existingReport?.pdfPath || null;
 
-      if (!activeReportId) {
-        const [createdReport] = await tx
-          .insert(fieldReports)
-          .values({
-            operationId,
-            summary: payload.summary,
-            recommendation: payload.recommendation,
-            pdfPath: publicPath,
-            generatedBy: userId,
-            generatedAt,
-          })
-          .returning({ id: fieldReports.id });
+        if (!activeReportId) {
+          const [createdReport] = await tx
+            .insert(fieldReports)
+            .values({
+              operationId,
+              summary: payload.summary,
+              recommendation: payload.recommendation,
+              pdfPath: publicPath,
+              generatedBy: userId,
+              generatedAt,
+            })
+            .returning({ id: fieldReports.id });
 
-        if (!createdReport) {
-          throw createError({
-            statusCode: 500,
-            message: "Failed to create report",
-          });
+          if (!createdReport) {
+            throw createError({
+              statusCode: 500,
+              message: "Failed to create report",
+            });
+          }
+
+          activeReportId = createdReport.id;
+        } else {
+          await tx
+            .update(fieldReports)
+            .set({
+              summary: payload.summary,
+              recommendation: payload.recommendation,
+              pdfPath: publicPath,
+              generatedBy: userId,
+              generatedAt,
+            })
+            .where(eq(fieldReports.id, activeReportId));
         }
 
-        activeReportId = createdReport.id;
-      } else {
-        await tx
-          .update(fieldReports)
-          .set({
-            summary: payload.summary,
-            recommendation: payload.recommendation,
-            pdfPath: publicPath,
-            generatedBy: userId,
-            generatedAt,
-          })
-          .where(eq(fieldReports.id, activeReportId));
-      }
+        const existingNotes = await tx
+          .select({ id: fieldReportNotes.id })
+          .from(fieldReportNotes)
+          .where(eq(fieldReportNotes.reportId, activeReportId));
 
-      const existingNotes = await tx
-        .select({ id: fieldReportNotes.id })
-        .from(fieldReportNotes)
-        .where(eq(fieldReportNotes.reportId, activeReportId));
-
-      const existingNoteIds = existingNotes.map((note) => note.id);
-      if (existingNoteIds.length > 0) {
-        await tx
-          .delete(fieldReportNoteDocumentations)
-          .where(inArray(fieldReportNoteDocumentations.noteId, existingNoteIds));
-        await tx
-          .delete(fieldReportNotes)
-          .where(inArray(fieldReportNotes.id, existingNoteIds));
-      }
-
-      for (const note of payload.notes) {
-        const [insertedNote] = await tx
-          .insert(fieldReportNotes)
-          .values({
-            reportId: activeReportId,
-            note: note.note,
-          })
-          .returning({ id: fieldReportNotes.id });
-
-        if (!insertedNote) {
-          throw createError({
-            statusCode: 500,
-            message: "Failed to create report note",
-          });
+        const existingNoteIds = existingNotes.map((note) => note.id);
+        if (existingNoteIds.length > 0) {
+          await tx
+            .delete(fieldReportNoteDocumentations)
+            .where(inArray(fieldReportNoteDocumentations.noteId, existingNoteIds));
+          await tx
+            .delete(fieldReportNotes)
+            .where(inArray(fieldReportNotes.id, existingNoteIds));
         }
 
-        if (note.documentationIds.length > 0) {
-          await tx.insert(fieldReportNoteDocumentations).values(
-            note.documentationIds.map((documentationId) => ({
-              noteId: insertedNote.id,
-              documentationId,
-            })),
-          );
-        }
-      }
+        for (const note of payload.notes) {
+          const [insertedNote] = await tx
+            .insert(fieldReportNotes)
+            .values({
+              reportId: activeReportId,
+              note: note.note,
+            })
+            .returning({ id: fieldReportNotes.id });
 
-      return activeReportId;
-    });
+          if (!insertedNote) {
+            throw createError({
+              statusCode: 500,
+              message: "Failed to create report note",
+            });
+          }
+
+          if (note.documentationIds.length > 0) {
+            await tx.insert(fieldReportNoteDocumentations).values(
+              note.documentationIds.map((documentationId) => ({
+                noteId: insertedNote.id,
+                documentationId,
+              })),
+            );
+          }
+        }
+
+        return {
+          reportId: activeReportId,
+          previousPdfPath,
+        };
+      })
+      .catch(async (transactionError) => {
+        await unlink(diskPath).catch(() => undefined);
+        throw transactionError;
+      });
+
+    if (
+      reportResult.previousPdfPath &&
+      reportResult.previousPdfPath !== publicPath
+    ) {
+      const previousDiskPath = toDiskPathFromPublicUploadPath(
+        reportResult.previousPdfPath,
+      );
+      if (previousDiskPath) {
+        await unlink(previousDiskPath).catch(() => undefined);
+      }
+    }
 
     return {
       success: true,
       report: {
-        id: reportId,
+        id: reportResult.reportId,
         pdfPath: publicPath,
       },
       message: "Field report generated successfully",

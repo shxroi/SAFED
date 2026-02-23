@@ -360,3 +360,15 @@
   - `corepack pnpm test` (pass)
   - `npx tsc --noEmit` (pass)
   - `corepack pnpm build` (fails on pre-existing migration issue: `0004_parallel_wallop.sql` relation `operationenroll` does not exist)
+
+## 2026-02-23 (Field report review fixes)
+
+- Updated `server/api/operations/[id]/report.post.ts` to avoid orphan PDFs on DB transaction failure:
+  - keeps cleanup path by deleting newly-written PDF when transaction fails
+  - deletes previous report PDF after successful regenerate/update
+- Aligned generation authorization signal between API and UI:
+  - `server/api/operations/[id]/report.get.ts` now computes `canGenerate` using supervisor + complete status
+  - `app/pages/operations/[id]/report.vue` now relies on backend `canGenerate` directly
+- Verification:
+  - `corepack pnpm test` (pass)
+  - `npx tsc --noEmit` (pass)

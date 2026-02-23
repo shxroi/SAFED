@@ -98,7 +98,7 @@ const operationTitle = computed(() => {
 const canGenerate = computed(() => {
   const payload = data.value;
   if (!payload) return false;
-  return payload.canGenerate && payload.operation.status === "Complete";
+  return payload.canGenerate;
 });
 
 const reportPdfPath = computed(() => data.value?.report?.pdfPath || null);
@@ -142,7 +142,7 @@ const openPdf = (): void => {
 
 const generateReport = async (): Promise<void> => {
   if (!canGenerate.value) {
-    toast.error("Only supervisor can generate report for completed operation");
+    toast.error("You are not allowed to generate report for this operation");
     return;
   }
 
