@@ -37,8 +37,6 @@ const logout = async () => {
           @click="logout"
           class="flex flex-col items-center gap-1 p-2 text-gray-600 hover:text-red-600"
         >
-          <LogOut class="h-5 w-5" />
-          <span class="text-xs">Logout</span>
         </button>
       </div>
     </nav>

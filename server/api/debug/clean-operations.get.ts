@@ -1,5 +1,8 @@
 import { db } from "../../utils/baseDb";
 import {
+  fieldReportNoteDocumentations,
+  fieldReportNotes,
+  fieldReports,
   fieldDocumentations,
   operationJobLists,
   operationTools,
@@ -29,6 +32,15 @@ export default defineEventHandler(async (event) => {
 
     // Delete in reverse FK dependency order
 
+    const deletedReportNoteDocs = await db
+      .delete(fieldReportNoteDocumentations)
+      .returning({ id: fieldReportNoteDocumentations.id });
+    const deletedReportNotes = await db
+      .delete(fieldReportNotes)
+      .returning({ id: fieldReportNotes.id });
+    const deletedReports = await db
+      .delete(fieldReports)
+      .returning({ id: fieldReports.id });
     const deletedDocs = await db
       .delete(fieldDocumentations)
       .returning({ id: fieldDocumentations.id });
@@ -59,6 +71,9 @@ export default defineEventHandler(async (event) => {
         operationTools: deletedTools.length,
         jobLists: deletedJobs.length,
         fieldDocumentations: deletedDocs.length,
+        fieldReports: deletedReports.length,
+        fieldReportNotes: deletedReportNotes.length,
+        fieldReportNoteDocumentations: deletedReportNoteDocs.length,
       },
     };
   } catch (error: any) {

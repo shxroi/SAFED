@@ -16,7 +16,7 @@ const deleteDialogOpen = ref(false);
 const operationToDelete = ref<Operation | null>(null);
 const deleteAction = ref<"delete" | "cancel">("delete");
 
-const { searchQuery, selectedType, selectedDate, showMyOperationsOnly } =
+const { searchQuery, selectedTypes, selectedDate, selectedStatuses } =
   useOperationListFilters();
 
 const getErrorMessage = (error: unknown, fallbackMessage: string): string => {
@@ -54,7 +54,7 @@ const {
       search: route.query.search || undefined,
       type: route.query.type || undefined,
       date: route.query.date || undefined,
-      my: route.query.my || undefined,
+      status: route.query.status || undefined,
     })),
   },
 );
@@ -196,9 +196,9 @@ const handleNewOperation = () => {
   <div class="mx-auto max-w-7xl p-4 md:p-8">
     <OperationFilters
       v-model:search="searchQuery"
-      v-model:type="selectedType"
+      v-model:types="selectedTypes"
       v-model:date="selectedDate"
-      v-model:my-only="showMyOperationsOnly"
+      v-model:statuses="selectedStatuses"
       :is-i-m="isIM"
       @create="handleNewOperation"
     />
@@ -233,13 +233,6 @@ const handleNewOperation = () => {
       class="text-center py-12"
     >
       <p class="text-gray-500">No operations found</p>
-      <Button
-        v-if="showMyOperationsOnly"
-        variant="link"
-        @click="showMyOperationsOnly = false"
-      >
-        Show all operations
-      </Button>
     </div>
 
     <DeleteConfirmDialog

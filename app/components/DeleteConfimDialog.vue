@@ -1,58 +1,60 @@
 <script lang="ts" setup>
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { toast } from "vue-sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const props = defineProps<{
-  open: boolean
-  title?: string
-  description?: string
-  entityName?: string // e.g., "User", "Tool", "Operation"
-}>()
+  open: boolean;
+  title?: string;
+  description?: string;
+}>();
 
-const emit = defineEmits([
-  'update:open',
-  'confirm'
-])
+const emit = defineEmits(["update:open", "confirm"]);
 
-const handleConfirm = () => {
-  emit('confirm')
-}
+const handleConfirm = (): void => {
+  emit("confirm");
+};
 
-const displayTitle = computed(() => props.title || 'Are you sure?')
-const displayDescription = computed(() => 
-  props.description || 'This action cannot be undone.'
-)
+const displayTitle = computed(() => props.title || "Are you sure?");
+const displayDescription = computed(
+  () => props.description || "This action cannot be undone.",
+);
 </script>
 
 <template>
-  <Dialog :open="open" @update:open="emit('update:open', $event)">
-    <DialogContent class="w-auto h-auto rounded-2xl p-6">
-      <DialogHeader class="items-center text-center">
-        <DialogTitle class="text-xl font-bold text-slate-900">
+  <AlertDialog :open="open" @update:open="emit('update:open', $event)">
+    <AlertDialogContent
+      class="max-w-[calc(100%-2rem)] rounded-2xl border border-slate-200 p-6 shadow-xl sm:max-w-[560px] sm:p-8"
+    >
+      <AlertDialogHeader class="space-y-3 text-center sm:min-h-[120px] sm:text-left">
+        <AlertDialogTitle class="text-2xl font-semibold tracking-tight text-slate-900">
           {{ displayTitle }}
-        </DialogTitle>
-        <DialogDescription class="text-slate-400 mt-2">
+        </AlertDialogTitle>
+        <AlertDialogDescription class="text-base text-slate-500">
           {{ displayDescription }}
-        </DialogDescription>
-      </DialogHeader>
-      
-      <div class="flex flex-col gap-3">
-        <Button 
-          variant="default" 
-          class="w-full bg-[#0F172A] hover:bg-slate-800 text-white rounded-lg h-11"
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+
+      <AlertDialogFooter class="mt-4 gap-3 sm:mt-2">
+        <AlertDialogAction
+          class="h-11 w-full rounded-xl bg-slate-900 text-base font-semibold text-white hover:bg-slate-800 sm:order-2 sm:h-10 sm:w-auto sm:min-w-[88px] sm:px-6"
           @click="handleConfirm"
         >
           Yes
-        </Button>
-        <Button 
-          variant="outline" 
-          class="w-full border-slate-200 text-slate-900 rounded-lg h-11 hover:bg-slate-50"
-          @click="emit('update:open', false)"
+        </AlertDialogAction>
+        <AlertDialogCancel
+          class="mt-0 h-11 w-full rounded-xl border-slate-200 text-base font-semibold text-slate-900 hover:bg-slate-50 sm:order-1 sm:h-10 sm:w-auto sm:min-w-[88px] sm:px-6"
         >
           No
-        </Button>
-      </div>
-    </DialogContent>
-  </Dialog>
+        </AlertDialogCancel>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 </template>

@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { ChevronDown, Filter, Plus, Search, X } from "lucide-vue-next";
+import { ChevronDown, Filter, Plus, Search } from "lucide-vue-next";
 import { type DateValue, parseDate } from "@internationalized/date";
-import type { OperationType } from "../../../shared/types/operation";
-import { OPERATION_TYPE_OPTIONS } from "@/constants/operation";
+import type { OperationStatus, OperationType } from "../../../shared/types/operation";
+import {
+  OPERATION_STATUS_OPTIONS,
+  OPERATION_TYPE_OPTIONS,
+} from "@/constants/operation";
 
+import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -22,84 +26,105 @@ import {
   CommandList,
 } from "@/components/ui/command";
 
-const props = withDefaults(
-  defineProps<{
-    search: string;
-    type: OperationType | "ALL";
-    date: string;
-    myOnly: boolean;
-    isIM: boolean;
-    showMyFilter?: boolean;
-  }>(),
-  {
-    showMyFilter: true,
-  },
-);
+const props = defineProps<{
+  search: string;
+  types: OperationType[];
+  date: string;
+  statuses: OperationStatus[];
+  isIM: boolean;
+}>();
 
 const emit = defineEmits<{
   "update:search": [value: string];
-  "update:type": [value: OperationType | "ALL"];
+  "update:types": [value: OperationType[]];
   "update:date": [value: string];
-  "update:myOnly": [value: boolean];
+  "update:statuses": [value: OperationStatus[]];
   create: [];
 }>();
 
 const open = ref(false);
+const typeSelectOpen = ref(false);
 
 const calendarValue = ref<DateValue | undefined>(
   props.date ? parseDate(props.date) : undefined,
 );
 
-const draftTypes = ref<OperationType[]>(
-  props.type === "ALL" ? [] : [props.type as OperationType],
-);
-
-const draftMyOnly = ref(props.myOnly);
+const draftTypes = ref<OperationType[]>([...props.types]);
+const draftStatuses = ref<OperationStatus[]>([...props.statuses]);
 
 watch(open, (isOpen) => {
   if (!isOpen) return;
 
   calendarValue.value = props.date ? parseDate(props.date) : undefined;
-  draftTypes.value = props.type === "ALL" ? [] : [props.type as OperationType];
-  draftMyOnly.value = props.myOnly;
+  draftTypes.value = [...props.types];
+  draftStatuses.value = [...props.statuses];
 });
 
+const selectedTypeItems = computed(() =>
+  draftTypes.value
+    .map(
+      (type) => {
+        const option = OPERATION_TYPE_OPTIONS.find((item) => item.value === type);
+        return {
+          value: type,
+          label: option?.label || type,
+        };
+      },
+    )
+    .filter(Boolean),
+);
+
 const toggleType = (type: OperationType): void => {
-  const index = draftTypes.value.indexOf(type);
-  if (index === -1) {
-    draftTypes.value.push(type);
+  if (draftTypes.value.includes(type)) {
+    draftTypes.value = draftTypes.value.filter((item) => item !== type);
     return;
   }
 
-  draftTypes.value.splice(index, 1);
+  draftTypes.value = [...draftTypes.value, type];
 };
+
+const isTypeChecked = (type: OperationType): boolean =>
+  draftTypes.value.includes(type);
+
+const toggleStatus = (status: OperationStatus): void => {
+  if (draftStatuses.value.includes(status)) {
+    draftStatuses.value = draftStatuses.value.filter((item) => item !== status);
+    return;
+  }
+
+  draftStatuses.value = [...draftStatuses.value, status];
+};
+
+const isStatusChecked = (status: OperationStatus): boolean =>
+  draftStatuses.value.includes(status);
 
 const applyFilters = (): void => {
   emit(
     "update:date",
     calendarValue.value ? calendarValue.value.toString() : "",
   );
-  emit(
-    "update:type",
-    draftTypes.value.length === 1 ? draftTypes.value[0]! : "ALL",
-  );
-  emit("update:myOnly", draftMyOnly.value);
+  emit("update:types", [...draftTypes.value]);
+  emit("update:statuses", [...draftStatuses.value]);
   open.value = false;
 };
 
 const clearAll = (): void => {
   calendarValue.value = undefined;
   draftTypes.value = [];
-  draftMyOnly.value = false;
+  draftStatuses.value = [];
 };
 
 const activeFilterCount = computed(() => {
   let count = 0;
   if (props.date) count += 1;
-  if (props.type !== "ALL") count += 1;
-  if (props.myOnly) count += 1;
+  if (props.types.length > 0) count += 1;
+  if (props.statuses.length > 0) count += 1;
   return count;
 });
+
+const removeType = (type: OperationType): void => {
+  toggleType(type);
+};
 </script>
 
 <template>
@@ -148,7 +173,7 @@ const activeFilterCount = computed(() => {
 
         <PopoverContent
           align="end"
-          class="w-80 overflow-hidden rounded-xl p-0 shadow-lg"
+          class="w-72 overflow-hidden rounded-xl p-0 shadow-lg"
         >
           <div
             class="flex items-center justify-between border-b border-slate-100 px-4 py-3"
@@ -166,85 +191,99 @@ const activeFilterCount = computed(() => {
             </Button>
           </div>
 
-          <div class="max-h-[70vh] space-y-6 overflow-y-auto p-4">
+          <div class="max-h-[70vh] space-y-5 overflow-y-auto p-4">
             <div class="space-y-2">
+              <label class="text-xs font-semibold uppercase text-slate-500"
+                >Date</label
+              >
               <Calendar
                 v-model="calendarValue"
                 initial-focus
-                class="rounded-md border border-slate-200"
+                class="rounded-md border border-slate-200 p-1 [&_button]:h-7 [&_button]:w-7 [&_table]:text-xs"
               />
             </div>
 
-            <div class="space-y-3">
+            <div class="space-y-2">
               <label class="text-xs font-semibold uppercase text-slate-500"
                 >Type</label
               >
 
-              <div
-                v-if="draftTypes.length > 0"
-                class="mb-2 flex flex-wrap gap-1.5"
-              >
-                <div
-                  v-for="type in draftTypes"
-                  :key="type"
-                  class="flex items-center gap-1 rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-800"
-                >
-                  {{ type }}
-                  <X
-                    class="h-3 w-3 cursor-pointer hover:text-red-500"
-                    @click="toggleType(type)"
-                  />
-                </div>
-              </div>
-
-              <Command class="rounded-md border border-slate-200">
-                <CommandInput placeholder="Search types..." class="h-9" />
-                <CommandList class="max-h-32">
-                  <CommandEmpty>No results.</CommandEmpty>
-                  <CommandGroup>
-                    <CommandItem
-                      v-for="option in OPERATION_TYPE_OPTIONS"
-                      :key="option.value"
-                      :value="option.value"
-                      class="text-xs"
-                      @select="toggleType(option.value)"
+              <Popover v-model:open="typeSelectOpen">
+                <PopoverTrigger as-child>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    class="h-auto min-h-9 w-full justify-between"
+                    aria-label="Select operation type"
+                  >
+                    <span v-if="selectedTypeItems.length === 0" class="text-xs text-slate-500"
+                      >Choose type</span
                     >
-                      <div class="flex items-center gap-2">
-                        <div
-                          class="flex h-3 w-3 items-center justify-center rounded-sm border"
-                          :class="
-                            draftTypes.includes(option.value)
-                              ? 'border-slate-900 bg-slate-900'
-                              : 'border-slate-300'
-                          "
+                    <div v-else class="flex min-w-0 flex-1 flex-wrap gap-1 pr-2">
+                      <Badge
+                        v-for="type in selectedTypeItems"
+                        :key="type.value"
+                        variant="secondary"
+                        class="max-w-full text-xs"
+                      >
+                        <span class="truncate">{{ type.label }}</span>
+                      </Badge>
+                    </div>
+                    <ChevronDown class="h-3.5 w-3.5 text-gray-400" />
+                  </Button>
+                </PopoverTrigger>
+
+                <PopoverContent class="w-[220px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search type..." class="h-9" />
+                    <CommandList>
+                      <CommandEmpty>No type found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          v-for="option in OPERATION_TYPE_OPTIONS"
+                          :key="option.value"
+                          :value="option.value"
+                          @select="toggleType(option.value)"
                         >
-                          <div
-                            v-if="draftTypes.includes(option.value)"
-                            class="h-1.5 w-1.5 rounded-full bg-white"
-                          />
-                        </div>
-                        {{ option.label }}
-                      </div>
-                    </CommandItem>
-                  </CommandGroup>
-                </CommandList>
-              </Command>
+                          <div class="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              class="rounded border-slate-300"
+                              :checked="isTypeChecked(option.value)"
+                              readonly
+                            />
+                            <span>{{ option.label }}</span>
+                          </div>
+                        </CommandItem>
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+
+              
             </div>
 
-            <div v-if="props.showMyFilter" class="space-y-2">
+            <div class="space-y-2">
               <label class="text-xs font-semibold uppercase text-slate-500"
-                >Assignment</label
+                >Status</label
               >
-              <label
-                class="flex cursor-pointer items-center gap-2 rounded-md border border-slate-100 px-2 py-1.5 hover:bg-slate-50"
-              >
-                <input
-                  v-model="draftMyOnly"
-                  type="checkbox"
-                  class="rounded border-slate-300"
-                />
-                <span class="text-xs text-slate-600">Only my operations</span>
-              </label>
+
+              <div class="space-y-2 rounded-md border border-slate-200 p-2">
+                <label
+                  v-for="status in OPERATION_STATUS_OPTIONS"
+                  :key="status.value"
+                  class="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-xs hover:bg-slate-50"
+                >
+                  <input
+                    type="checkbox"
+                    class="rounded border-slate-300"
+                    :checked="isStatusChecked(status.value)"
+                    @change="toggleStatus(status.value)"
+                  />
+                  <span>{{ status.label }}</span>
+                </label>
+              </div>
             </div>
           </div>
 

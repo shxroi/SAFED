@@ -45,6 +45,7 @@ const props = defineProps<{
   staffNameById: Map<number, string>;
   isBasicInfoValid: boolean;
   submitting: boolean;
+  isSaving: boolean;
   formatDate: (date: Date | null) => string;
 }>();
 
@@ -263,7 +264,7 @@ const onCalendarUpdate = (val: unknown) => {
       class="w-full bg-slate-900 px-8 text-white hover:bg-slate-800 sm:w-auto"
       @click="emit('save')"
     >
-      {{ props.submitting ? "Saving..." : "Save" }}
+      {{ props.isSaving ? "Saving..." : "Save" }}
     </Button>
   </div>
 </template>

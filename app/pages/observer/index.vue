@@ -8,8 +8,9 @@ const router = useRouter()
 
 const {
   searchQuery,
-  selectedType,
+  selectedTypes,
   selectedDate,
+  selectedStatuses,
 } = useOperationListFilters()
 
 const { data, pending, error } = await useFetch<{ operations: Operation[]; total: number }>('/api/operations', {
@@ -17,6 +18,7 @@ const { data, pending, error } = await useFetch<{ operations: Operation[]; total
     search: route.query.search || undefined,
     type: route.query.type || undefined,
     date: route.query.date || undefined,
+    status: route.query.status || undefined,
   })),
 })
 
@@ -68,11 +70,10 @@ const handleView = (operation: Operation) => {
   <div class="mx-auto max-w-7xl p-4 md:p-8">
     <OperationFilters
       v-model:search="searchQuery"
-      v-model:type="selectedType"
+      v-model:types="selectedTypes"
       v-model:date="selectedDate"
-      :my-only="false"
+      v-model:statuses="selectedStatuses"
       :is-i-m="false"
-      :show-my-filter="false"
     />
 
     <OperationStats :stats="statusCounts" />

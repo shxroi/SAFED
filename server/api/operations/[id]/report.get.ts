@@ -8,6 +8,7 @@ import {
   operationJobLists,
   operations,
   operationsEnroll,
+  users,
 } from "../../../db/schema";
 
 export default defineEventHandler(async (event) => {
@@ -34,6 +35,7 @@ export default defineEventHandler(async (event) => {
         vesselName: operations.vesselName,
         type: operations.type,
         date: operations.date,
+        location: operations.location,
       })
       .from(operations)
       .where(eq(operations.id, operationId))
@@ -63,6 +65,20 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    const [supervisor] = await db
+      .select({
+        supervisorName: users.name,
+      })
+      .from(operationsEnroll)
+      .innerJoin(users, eq(operationsEnroll.userId, users.id))
+      .where(
+        and(
+          eq(operationsEnroll.operationId, operationId),
+          eq(operationsEnroll.operationRole, "SUPERVISOR"),
+        ),
+      )
+      .limit(1);
+
     const canGenerate =
       userEnrollment?.operationRole === "SUPERVISOR" &&
       operation.status === "Complete";
@@ -70,8 +86,10 @@ export default defineEventHandler(async (event) => {
     const [report] = await db
       .select({
         id: fieldReports.id,
-        summary: fieldReports.summary,
-        recommendation: fieldReports.recommendation,
+        referenceNumber: fieldReports.referenceNumber,
+        serialNumber: fieldReports.serialNumber,
+        crewName: fieldReports.crewName,
+        crewSignRequired: fieldReports.crewSignRequired,
         pdfPath: fieldReports.pdfPath,
         generatedAt: fieldReports.generatedAt,
       })
@@ -99,6 +117,7 @@ export default defineEventHandler(async (event) => {
         operation: {
           ...operation,
           date: operation.date.toISOString(),
+          supervisorName: supervisor?.supervisorName || null,
         },
         report: null,
         canGenerate,
@@ -123,6 +142,7 @@ export default defineEventHandler(async (event) => {
       noteId: number;
       documentationId: number;
       fileName: string;
+      filePath: string;
     }> = [];
 
     if (noteIds.length > 0) {
@@ -131,6 +151,7 @@ export default defineEventHandler(async (event) => {
           noteId: fieldReportNoteDocumentations.noteId,
           documentationId: fieldReportNoteDocumentations.documentationId,
           fileName: fieldDocumentations.fileName,
+          filePath: fieldDocumentations.filePath,
         })
         .from(fieldReportNoteDocumentations)
         .innerJoin(
@@ -150,21 +171,28 @@ export default defineEventHandler(async (event) => {
         acc[key].push({
           id: link.documentationId,
           fileName: link.fileName,
+          filePath: link.filePath,
         });
         return acc;
       },
-      {} as Record<number, Array<{ id: number; fileName: string }>>,
+      {} as Record<
+        number,
+        Array<{ id: number; fileName: string; filePath: string }>
+      >,
     );
 
     return {
       operation: {
         ...operation,
         date: operation.date.toISOString(),
+        supervisorName: supervisor?.supervisorName || null,
       },
       report: {
         id: report.id,
-        summary: report.summary,
-        recommendation: report.recommendation,
+        referenceNumber: report.referenceNumber,
+        serialNumber: report.serialNumber,
+        crewName: report.crewName,
+        crewSignRequired: report.crewSignRequired,
         pdfPath: report.pdfPath,
         generatedAt: report.generatedAt.toISOString(),
         notes: notes.map((note) => ({

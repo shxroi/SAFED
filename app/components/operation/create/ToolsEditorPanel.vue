@@ -19,6 +19,7 @@ const props = defineProps<{
   toolsList: ChecklistToolInput[];
   toolOptions: ToolOption[];
   submitting: boolean;
+  isSaving: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -206,7 +207,7 @@ const handleDecrement = (toolId: number, currentQuantity: number) => {
         class="w-full bg-slate-900 px-8 text-white hover:bg-slate-800 sm:w-auto"
         @click="emit('save')"
       >
-        {{ props.submitting ? "Saving..." : "Save Checklist" }}
+        {{ props.isSaving ? "Saving..." : "Save Checklist" }}
       </Button>
     </div>
   </div>

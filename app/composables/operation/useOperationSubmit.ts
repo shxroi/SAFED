@@ -47,6 +47,13 @@ interface UseOperationSubmitOptions {
   ) => ChecklistSectionInput[];
 }
 
+export type SubmitSource =
+  | "form"
+  | "tools"
+  | "section"
+  | "footer-draft"
+  | "footer-finish";
+
 const getErrorMessage = (error: unknown, fallbackMessage: string): string => {
   if (
     typeof error === "object" &&
@@ -80,6 +87,7 @@ export const useOperationSubmit = ({
   const router = useRouter();
   const route = useRoute();
   const submitting = ref(false);
+  const activeSubmitSource = ref<SubmitSource | null>(null);
 
   const buildOperationPayload = () => ({
     company: formData.value.company.trim(),
@@ -202,6 +210,7 @@ export const useOperationSubmit = ({
   const handleSubmit = async (
     targetStatus: "Draft" | "Active" = "Draft",
     shouldRedirect = true,
+    source: SubmitSource = "footer-draft",
   ) => {
     if (submitting.value) return;
 
@@ -210,6 +219,7 @@ export const useOperationSubmit = ({
       return;
     }
 
+    activeSubmitSource.value = source;
     submitting.value = true;
     try {
       const savedOperationId = await saveOperation(targetStatus);
@@ -226,8 +236,9 @@ export const useOperationSubmit = ({
       toast.error(getErrorMessage(err, "Failed to save operation"));
     } finally {
       submitting.value = false;
+      activeSubmitSource.value = null;
     }
   };
 
-  return { submitting, loadExistingOperation, handleSubmit };
+  return { submitting, activeSubmitSource, loadExistingOperation, handleSubmit };
 };

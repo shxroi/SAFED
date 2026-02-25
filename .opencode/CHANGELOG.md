@@ -372,3 +372,228 @@
 - Verification:
   - `corepack pnpm test` (pass)
   - `npx tsc --noEmit` (pass)
+
+## 2026-02-23 (Berita Acara report template)
+
+- Reworked report form UI in `app/pages/operations/[id]/report.vue` to match operation report template flow:
+  - added `Reference Number`, `Serial Number`, `Crew Name`, and `Crew sign required` toggle
+  - kept attachment-note blocks with multi-documentation selection
+  - retained generate/regenerate and open-preview actions
+- Updated report APIs:
+  - `server/api/operations/[id]/report.post.ts` now validates and stores template fields and generates PDF from template-oriented payload
+  - `server/api/operations/[id]/report.get.ts` now returns template fields + operation context (`location`, `supervisorName`) for prefill/reopen
+- Rebuilt PDF renderer in `server/utils/reportPdf.ts`:
+  - first page now follows Berita Acara structure and wording
+  - lampiran pages render selected documentation images with note captions and auto page breaks
+  - signature capture is not stored; only document generation output is produced
+- Schema and migration updates:
+  - aligned `fieldDocumentations.joblistId` mapping to `joblistid` in `server/db/schema.ts`
+  - added `fieldReports` columns for template metadata (`referencenumber`, `serialnumber`, `crewname`, `crewsignrequired`)
+  - added migration `server/db/migrations/0013_report_template_fields.sql` and journal entry
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass)
+
+## 2026-02-23 (Field documentation column compatibility fix)
+
+- Investigated runtime query failure on `fielddocumentations.joblistid` for checklist/report flow.
+- Root cause: recent schema mapping changed `fieldDocumentations.joblistId` to `joblistid`, but active DB schema in this environment uses `operationjoblistid`.
+- Fixed by restoring ORM mapping in `server/db/schema.ts`:
+  - `fieldDocumentations.joblistId` -> `integer("operationjoblistid")`
+- Removed invalid compatibility migration attempt and kept migration journal consistent:
+  - deleted `server/db/migrations/0014_fix_field_documentations_joblist_column.sql`
+  - removed `0014` journal entry from `server/db/migrations/meta/_journal.json`
+- Verification:
+  - `npm run build` (pass)
+  - `npm run test` (pass)
+
+## 2026-02-23 (Report attachment picker popup UX)
+
+- Updated attachment image selection UX in `app/pages/operations/[id]/report.vue`:
+  - replaced inline checkbox list with popup gallery picker
+  - each attachment note now uses a `Select documentation images` button
+  - popup supports multi-select by clicking image cards, with selected-state highlight
+  - selected images are shown back in the note card as thumbnail previews with remove action
+- Verification:
+  - `npm run build` (pass)
+
+## 2026-02-24 (Operation filter UX adjustments)
+
+- Updated filter controls in `app/components/operation/OperationFilters.vue`:
+  - reduced filter panel width and calendar footprint (smaller date picker)
+  - kept filter scope to Date, Type, and Status
+  - changed Type to single-select dropdown with selected type shown as badge in the field
+  - changed Status to checkbox-based multi-select
+  - removed assignment/my-only filter UI from the panel
+- Added status option constants in `app/constants/operation.ts`.
+- Updated query state handling in `app/composables/operation/useOperationListFilters.ts`:
+  - added `status` URL query sync using comma-separated values
+  - removed `my` filter state from UI-driven filter logic
+- Updated pages to use new status filter binding and query:
+  - `app/pages/operations/index.vue`
+  - `app/pages/observer/index.vue`
+- Extended operations API filter support in `server/api/operations.get.ts`:
+  - added parsing/validation for `status` query
+  - applies status conditions when provided
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass)
+
+## 2026-02-24 (Operation filter multi-type support)
+
+- Updated operation filters to support selecting multiple `Type` values:
+  - `app/components/operation/OperationFilters.vue` now uses multi-select type dropdown with removable badges
+  - selected types are synced as array state and emitted via `update:types`
+- Updated filter state/query sync:
+  - `app/composables/operation/useOperationListFilters.ts` now stores `selectedTypes: OperationType[]`
+  - URL query `type` now supports comma-separated values (e.g. `type=Installation,Maintenance`)
+- Updated page bindings:
+  - `app/pages/operations/index.vue`
+  - `app/pages/observer/index.vue`
+  - both now bind `v-model:types`
+- Updated API filtering in `server/api/operations.get.ts`:
+  - `type` query now accepts multiple values and filters by OR condition
+  - invalid type values return empty result safely
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass)
+
+## 2026-02-25 (Crew sign toggle enforcement)
+
+- Finalized crew-sign toggle behavior for report generation:
+  - if `crewSignRequired` is `false`, `crewName` is normalized to empty before persistence and PDF generation
+  - if `crewSignRequired` is `true`, `crewName` is required by API validation
+- Updated API validation in `server/api/operations/[id]/report.post.ts`:
+  - made `crewName` conditionally required via schema `superRefine`
+  - ensured create/update writes use normalized crew name tied to the toggle state
+- Updated PDF rendering in `server/utils/reportPdf.ts`:
+  - crew signature block and crew name are rendered only when `crewSignRequired` is `true`
+  - when crew sign is not required, only vendor sign block is shown and crew name is omitted from document
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass)
+
+## 2026-02-25 (Responsive confirmation/delete dialog style)
+
+- Updated shared confirmation component `app/components/DeleteConfimDialog.vue` to match the requested two-layout alert design:
+  - mobile: stacked full-width actions (`Yes` primary on top, `No` outline below)
+  - web: right-aligned horizontal actions (`No` outline then `Yes` primary)
+- Switched implementation from generic `Dialog` to `AlertDialog` primitives for consistent confirmation semantics and behavior.
+- Kept existing page integrations intact (`operations`, `tools`, `users`, and operation preparation finish confirmation) since they all consume the shared dialog.
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass)
+
+## 2026-02-25 (Operation create per-button loading state)
+
+- Fixed create-operation save UX so only the clicked save action shows loading text while request is in-flight.
+- Added submit source tracking in `app/composables/operation/useOperationSubmit.ts` via `activeSubmitSource` and extended `handleSubmit(...)` to accept a source key.
+- Updated `app/pages/operations/create.vue` to pass source per action:
+  - form card save -> `form`
+  - tools checklist save -> `tools`
+  - section save -> `section`
+  - footer save draft -> `footer-draft`
+  - finish confirmation submit -> `footer-finish`
+- Updated create page button rendering to:
+  - keep global disable lock while submitting (prevent duplicate submits)
+  - show loading label only on active source button
+- Updated child props for save button labels:
+  - `app/components/operation/create/OperationFormCard.vue`
+  - `app/components/operation/create/ToolsEditorPanel.vue`
+  - `app/components/operation/create/SectionEditorPanel.vue`
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass)
+
+## 2026-02-25 (Role-based sidebar + execute footer layout)
+
+- Updated `app/layouts/default.vue` with role-based navigation items:
+  - IM: Users Management, Tools Management, Manage Operations
+  - STAFF/supervisor accounts: Manage Operations only
+  - OBSERVER: Operations (`/observer`) only
+- Implemented working mobile hamburger navigation in `app/layouts/default.vue`:
+  - added open/close state for mobile drawer
+  - added overlay and slide-in menu with same role-based items
+  - mobile menu auto-closes on route changes and on logout
+- Fixed mobile header interaction in `app/layouts/default.vue` by removing the overlapping absolute title pattern and using inline mobile title, so hamburger remains tappable.
+- Fixed supervisor finish footer overlap in `app/pages/operations/[id]/execute.vue`:
+  - added desktop sidebar offset (`md:left-64`) so the fixed bottom action bar does not cover sidebar area.
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass)
+
+## 2026-02-25 (Checklist activity card visual adjustment)
+
+- Updated section checklist module presentation in `app/components/operation/checklist/OperationSectionsChecklist.vue`:
+  - each module now wraps its activities in a rounded, bordered section container
+  - added module heading label (`module.name` fallback to `Module {n}`)
+  - empty-module state now shown in a bordered white placeholder block
+- Updated activity card styling in `app/components/operation/checklist/OperationActivityCard.vue`:
+  - card base switched to light slate background
+  - job description now rendered in a dedicated slate box (`bg-slate-100`) with border
+  - editable note textarea now white with border (instead of gray fill)
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass)
+
+## 2026-02-25 (Activity integrated into section container)
+
+- Refined checklist structure so activity content feels part of the section/module container (not separate standalone cards).
+- Updated `app/components/operation/checklist/OperationSectionsChecklist.vue`:
+  - wrapped activity list in a shared inner container (`rounded + border + slate background`)
+  - added divider lines between activities inside the same module block
+- Updated `app/components/operation/checklist/OperationActivityCard.vue`:
+  - in editable mode, removed outer card shell (border/background/padding)
+  - keeps content blocks only, so layout inherits the surrounding section container
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass)
+
+## 2026-02-25 (Checklist layout aligned to reference design)
+
+- Further aligned checklist module/activity visuals with provided reference in:
+  - `app/components/operation/checklist/OperationSectionsChecklist.vue`
+  - `app/components/operation/checklist/OperationActivityCard.vue`
+- Section/module refinements:
+  - module heading emphasized and activity list grouped in one integrated inner panel
+  - cleaner nested background/border hierarchy to avoid separate-card feel
+- Activity refinements:
+  - job description in slate box
+  - condition controls styled as wider green/red action pills
+  - note area styled as white bordered field with adjusted height
+  - upload button restyled to flat light-slate appearance
+  - save button right-aligned with compact width
+  - hidden extra helper indicators (`Documentation Required`, max-photos hint, empty-doc warning) for cleaner visual parity
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass)
+
+## 2026-02-25 (Checklist polish follow-up)
+
+- Final polish pass for execution checklist and layout behavior:
+  - `app/pages/operations/[id]/execute.vue`
+    - rendered bottom fixed finish bar only for supervisors (prevents empty fixed bar for staff)
+    - normalized labels (`Finish Operation`, `Finishing…`)
+  - `app/components/operation/checklist/OperationActivityCard.vue`
+    - updated note placeholder text to `Type note here…`
+    - added visible keyboard focus rings on uploaded/pending image preview buttons
+    - removed hidden unused empty-documentation helper block
+    - normalized save loading label to `Saving…`
+  - `app/components/operation/checklist/OperationSectionsChecklist.vue`
+    - adjusted module title sizing for better mobile/desktop balance
+  - `app/layouts/default.vue`
+    - fixed avatar trigger class typos and hover ring transition styling
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass; existing duplicate auto-import and sourcemap warnings remain)
+
+## 2026-02-25 (Report image fit: vertical + horizontal)
+
+- Updated report PDF attachment image rendering in `server/utils/reportPdf.ts` so images fill the attachment box in both dimensions.
+- Changed image preprocessing pipeline:
+  - `sharp` now resizes each attachment to the target box with `fit: "cover"` and centered crop
+  - generated image is then drawn exactly to the report box size
+- Removed old scale/mask overflow logic from PDF drawing path (no longer needed).
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass; existing duplicate auto-import/sourcemap warnings remain)

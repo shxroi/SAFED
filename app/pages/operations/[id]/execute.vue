@@ -349,16 +349,16 @@ onMounted(async () => {
       </Card>
 
       <div
-        class="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white p-4"
+        v-if="isSupervisor"
+        class="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white p-4 md:left-64"
       >
         <Button
-          v-if="isSupervisor"
           variant="outline"
           class="mx-auto h-12 w-full max-w-7xl border-slate-900 text-slate-900 hover:bg-slate-50"
           :disabled="operation.status === 'Complete'"
           @click="showFinishDialog = true"
         >
-          Finished Operation
+          Finish Operation
         </Button>
       </div>
     </div>
@@ -369,9 +369,6 @@ onMounted(async () => {
           <Card class="mb-6">
             <CardHeader class="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
               <div class="flex items-center gap-2">
-                <div class="p-2 bg-gray-100 rounded-lg">
-                  <Download class="h-5 w-5 text-gray-600" aria-hidden="true" />
-                </div>
                 <CardTitle class="text-base font-medium"
                   >{{ operation.type }} - {{ operationTitle }}</CardTitle
                 >
@@ -485,7 +482,7 @@ onMounted(async () => {
                 :class="[
                   'w-full rounded-lg p-3 text-left text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-slate-800',
                   selectedSectionId === section.id
-                    ? 'bg-slate-100 text-slate-900 border border-slate-200'
+                    ? 'bg-white text-slate-900 border border-slate-200'
                     : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50',
                 ]"
                 :aria-pressed="selectedSectionId === section.id"
@@ -590,7 +587,7 @@ onMounted(async () => {
         <AlertDialogFooter>
           <AlertDialogCancel :disabled="finishing">Cancel</AlertDialogCancel>
           <AlertDialogAction :disabled="finishing" @click="finishOperation">
-            {{ finishing ? "Finishing..." : "Finish" }}
+            {{ finishing ? "Finishing…" : "Finish" }}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

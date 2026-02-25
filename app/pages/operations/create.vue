@@ -61,16 +61,37 @@ const {
 
 const finishDialogOpen = ref(false);
 
-const { submitting, loadExistingOperation, handleSubmit } = useOperationSubmit({
-  operationId,
-  isEditing,
-  isBasicInfoValid,
-  formData,
-  sectionsList,
-  toolsList,
-  createEmptySection,
-  mapChecklistSections,
-});
+const { submitting, activeSubmitSource, loadExistingOperation, handleSubmit } =
+  useOperationSubmit({
+    operationId,
+    isEditing,
+    isBasicInfoValid,
+    formData,
+    sectionsList,
+    toolsList,
+    createEmptySection,
+    mapChecklistSections,
+  });
+
+const isFormSaving = computed(
+  () => submitting.value && activeSubmitSource.value === "form",
+);
+
+const isToolsSaving = computed(
+  () => submitting.value && activeSubmitSource.value === "tools",
+);
+
+const isSectionSaving = computed(
+  () => submitting.value && activeSubmitSource.value === "section",
+);
+
+const isFooterDraftSaving = computed(
+  () => submitting.value && activeSubmitSource.value === "footer-draft",
+);
+
+const isFooterFinishSaving = computed(
+  () => submitting.value && activeSubmitSource.value === "footer-finish",
+);
 
 onMounted(async () => {
   if (user.value?.roles !== "IM") {
@@ -105,13 +126,14 @@ watch(
             :staff-name-by-id="staffNameById"
             :is-basic-info-valid="isBasicInfoValid"
             :submitting="submitting"
+            :is-saving="isFormSaving"
             :format-date="formatDate"
             @update:is-date-open="isDateOpen = $event"
             @update:is-staff-open="isStaffOpen = $event"
             @update:calendar-date="calendarDate = $event"
             @toggle-staff="toggleStaff"
             @remove-staff="removeStaffById"
-            @save="() => handleSubmit('Draft', false)"
+            @save="() => handleSubmit('Draft', false, 'form')"
           />
         </CardContent>
       </Card>
@@ -141,10 +163,11 @@ watch(
                 :tools-list="toolsList"
                 :tool-options="toolOptions"
                 :submitting="submitting"
+                :is-saving="isToolsSaving"
                 @toggle-tool="toggleToolSelection"
                 @increment-tool="incrementToolById"
                 @decrement-tool="decrementToolById"
-                @save="() => handleSubmit('Draft', false)"
+                @save="() => handleSubmit('Draft', false, 'tools')"
               />
             </CardContent>
           </Card>
@@ -158,11 +181,12 @@ watch(
                 :sections-list="sectionsList"
                 :selected-section="selectedSection"
                 :submitting="submitting"
+                :is-saving="isSectionSaving"
                 @add-module="addModule"
                 @remove-module="removeModule"
                 @add-activity="addActivity"
                 @remove-activity="removeActivity"
-                @save="() => handleSubmit('Draft', false)"
+                @save="() => handleSubmit('Draft', false, 'section')"
               />
             </CardContent>
           </Card>
@@ -174,16 +198,16 @@ watch(
           variant="outline"
           :disabled="!isBasicInfoValid || submitting"
           class="w-full border-gray-300 px-8 sm:w-auto"
-          @click="() => handleSubmit('Draft', true)"
+          @click="() => handleSubmit('Draft', true, 'footer-draft')"
         >
-          {{ submitting ? "Saving..." : "Save draft" }}
+          {{ isFooterDraftSaving ? "Saving..." : "Save draft" }}
         </Button>
         <Button
           :disabled="!isBasicInfoValid || submitting"
           class="w-full bg-slate-900 px-8 text-white hover:bg-slate-800 sm:w-auto"
           @click="finishDialogOpen = true"
         >
-          {{ submitting ? "Saving..." : "Finish Preparation" }}
+          {{ isFooterFinishSaving ? "Saving..." : "Finish Preparation" }}
         </Button>
       </div>
     </div>
@@ -195,7 +219,7 @@ watch(
       @confirm="
         () => {
           finishDialogOpen = false;
-          handleSubmit('Active', true);
+          handleSubmit('Active', true, 'footer-finish');
         }
       "
     />

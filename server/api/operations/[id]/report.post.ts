@@ -11,22 +11,48 @@ import {
   operationJobLists,
   operations,
   operationsEnroll,
+  users,
 } from "../../../db/schema";
 import { buildFieldReportPdf } from "../../../utils/reportPdf";
 
-const reportPayloadSchema = z.object({
-  summary: z.string().trim().min(1, "Summary is required"),
-  recommendation: z.string().trim().min(1, "Recommendation is required"),
-  notes: z
-    .array(
-      z.object({
-        note: z.string().trim().min(1, "Note is required"),
-        documentationIds: z.array(z.number().int().positive()).default([]),
-      }),
-    )
-    .max(30, "Too many notes")
-    .default([]),
-});
+const reportPayloadSchema = z
+  .object({
+    referenceNumber: z
+      .string()
+      .trim()
+      .min(1, "Reference number is required")
+      .max(120, "Reference number is too long"),
+    serialNumber: z
+      .string()
+      .trim()
+      .min(1, "Serial number is required")
+      .max(120, "Serial number is too long"),
+    crewName: z
+      .string()
+      .trim()
+      .max(255, "Crew name is too long")
+      .default(""),
+    crewSignRequired: z.boolean().default(false),
+    notes: z
+      .array(
+        z.object({
+          note: z.string().trim().min(1, "Attachment note is required"),
+          documentationIds: z.array(z.number().int().positive()).default([]),
+        }),
+      )
+      .min(1, "At least one attachment note is required")
+      .max(30, "Too many attachment notes")
+      .default([]),
+  })
+  .superRefine((value, context) => {
+    if (value.crewSignRequired && value.crewName.length === 0) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["crewName"],
+        message: "Crew name is required",
+      });
+    }
+  });
 
 const toDiskPathFromPublicUploadPath = (
   publicUploadPath: string,
@@ -54,8 +80,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, message: "Invalid operation ID" });
     }
 
-    const body = await readBody(event);
-    const parsed = reportPayloadSchema.safeParse(body);
+    const parsed = reportPayloadSchema.safeParse(await readBody(event));
     if (!parsed.success) {
       throw createError({
         statusCode: 400,
@@ -64,6 +89,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const payload = parsed.data;
+    const normalizedCrewName = payload.crewSignRequired ? payload.crewName : "";
 
     const [operation] = await db
       .select({
@@ -71,6 +97,8 @@ export default defineEventHandler(async (event) => {
         status: operations.status,
         company: operations.company,
         vesselName: operations.vesselName,
+        date: operations.date,
+        location: operations.location,
       })
       .from(operations)
       .where(eq(operations.id, operationId))
@@ -88,8 +116,12 @@ export default defineEventHandler(async (event) => {
     }
 
     const [supervisorEnrollment] = await db
-      .select({ id: operationsEnroll.id })
+      .select({
+        id: operationsEnroll.id,
+        supervisorName: users.name,
+      })
       .from(operationsEnroll)
+      .innerJoin(users, eq(operationsEnroll.userId, users.id))
       .where(
         and(
           eq(operationsEnroll.operationId, operationId),
@@ -106,13 +138,19 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    const normalizedNotes = payload.notes.map((note) => ({
+      note: note.note,
+      documentationIds: [...new Set(note.documentationIds)],
+    }));
+
     const requestedDocIds = [
-      ...new Set(payload.notes.flatMap((note) => note.documentationIds)),
+      ...new Set(normalizedNotes.flatMap((note) => note.documentationIds)),
     ];
 
     let validDocs: Array<{
       id: number;
       fileName: string;
+      filePath: string;
     }> = [];
 
     if (requestedDocIds.length > 0) {
@@ -120,6 +158,7 @@ export default defineEventHandler(async (event) => {
         .select({
           id: fieldDocumentations.id,
           fileName: fieldDocumentations.fileName,
+          filePath: fieldDocumentations.filePath,
         })
         .from(fieldDocumentations)
         .innerJoin(
@@ -147,14 +186,19 @@ export default defineEventHandler(async (event) => {
     const reportPdfBytes = await buildFieldReportPdf({
       operationId,
       operationTitle: operation.vesselName || operation.company,
+      operationLocation: operation.location,
+      operationDate: operation.date,
+      supervisorName: supervisorEnrollment.supervisorName,
       generatedAt,
-      summary: payload.summary,
-      recommendation: payload.recommendation,
-      notes: payload.notes.map((note) => ({
+      referenceNumber: payload.referenceNumber,
+      serialNumber: payload.serialNumber,
+      crewName: normalizedCrewName,
+      crewSignRequired: payload.crewSignRequired,
+      notes: normalizedNotes.map((note) => ({
         note: note.note,
-        documentationNames: note.documentationIds
-          .map((docId) => docsById.get(docId)?.fileName || "")
-          .filter(Boolean),
+        documentations: note.documentationIds
+          .map((docId) => docsById.get(docId))
+          .filter(Boolean) as Array<{ fileName: string; filePath: string }>,
       })),
     });
 
@@ -189,8 +233,12 @@ export default defineEventHandler(async (event) => {
             .insert(fieldReports)
             .values({
               operationId,
-              summary: payload.summary,
-              recommendation: payload.recommendation,
+              referenceNumber: payload.referenceNumber,
+              serialNumber: payload.serialNumber,
+              crewName: normalizedCrewName,
+              crewSignRequired: payload.crewSignRequired,
+              summary: "",
+              recommendation: "",
               pdfPath: publicPath,
               generatedBy: userId,
               generatedAt,
@@ -209,8 +257,12 @@ export default defineEventHandler(async (event) => {
           await tx
             .update(fieldReports)
             .set({
-              summary: payload.summary,
-              recommendation: payload.recommendation,
+              referenceNumber: payload.referenceNumber,
+              serialNumber: payload.serialNumber,
+              crewName: normalizedCrewName,
+              crewSignRequired: payload.crewSignRequired,
+              summary: "",
+              recommendation: "",
               pdfPath: publicPath,
               generatedBy: userId,
               generatedAt,
@@ -233,7 +285,7 @@ export default defineEventHandler(async (event) => {
             .where(inArray(fieldReportNotes.id, existingNoteIds));
         }
 
-        for (const note of payload.notes) {
+        for (const note of normalizedNotes) {
           const [insertedNote] = await tx
             .insert(fieldReportNotes)
             .values({
@@ -281,6 +333,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    
     return {
       success: true,
       report: {

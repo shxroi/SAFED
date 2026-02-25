@@ -11,6 +11,7 @@ const props = defineProps<{
   sectionsList: ChecklistSectionInput[];
   selectedSection: number;
   submitting: boolean;
+  isSaving: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -149,7 +150,7 @@ const currentSection = computed(
         class="h-11 w-full bg-slate-900 px-8 text-white hover:bg-slate-800 sm:h-9 sm:w-auto"
         @click="emit('save')"
       >
-        {{ props.submitting ? "Saving..." : "Save" }}
+        {{ props.isSaving ? "Saving..." : "Save" }}
       </Button>
     </div>
   </div>

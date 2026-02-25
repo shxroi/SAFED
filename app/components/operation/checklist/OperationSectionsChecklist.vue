@@ -83,35 +83,47 @@ const isUploading = (taskId: number): boolean =>
         <div
           v-for="(module, moduleIndex) in section.modules"
           :key="module.id"
+          class="rounded-xl border border-slate-200 bg-white p-4 sm:p-5"
         >
+          <p class="mb-3 text-xl font-semibold text-slate-800 sm:text-2xl">
+            {{ module.name || `Module ${moduleIndex + 1}` }}
+          </p>
+
           <div
             v-if="module.activities.length === 0"
-            class="text-sm text-gray-500 italic p-4 text-center"
+            class="rounded-lg border border-dashed border-slate-200 bg-white p-4 text-center text-sm italic text-gray-500"
           >
             No activities in this section
           </div>
-          <div
-            v-for="(activity, activityIndex) in module.activities"
-            :key="activity.id"
-          >
-            <OperationActivityCard
-              :activity="activity"
-              :editable="editable"
-              :max-docs-per-task="maxDocsPerTask"
-              :is-uploading="isUploading(activity.id)"
-              :visible-docs="getVisibleDocs(activity)"
-              :pending-docs="getPendingDocs(activity.id)"
-              :deleted-docs="getDeletedDocs(activity)"
-              :remaining-slots="getRemainingSlots(activity)"
-              @set-status="(status) => emit('set-status', sectionIndex, moduleIndex, activityIndex, status)"
-              @update-notes="(value) => emit('update-notes', activity, value)"
-              @add-documentation="(files) => emit('add-documentation', activity, files)"
-              @remove-pending="(pendingId) => emit('remove-pending', activity.id, pendingId)"
-              @mark-delete="(docId) => emit('mark-delete', activity.id, docId)"
-              @undo-delete="(docId) => emit('undo-delete', activity.id, docId)"
-              @open-preview="(path, name, isLocal) => emit('open-preview', path, name, isLocal)"
-              @save="emit('save', activity)"
-            />
+          <div v-else class="rounded-xl border border-slate-200 bg-white p-3 sm:p-4">
+            <div
+              v-for="(activity, activityIndex) in module.activities"
+              :key="activity.id"
+              :class="[
+                'py-3 sm:py-4',
+                activityIndex > 0 ? 'border-t border-slate-200' : 'pt-0',
+                activityIndex === module.activities.length - 1 ? 'pb-0' : '',
+              ]"
+            >
+              <OperationActivityCard
+                :activity="activity"
+                :editable="editable"
+                :max-docs-per-task="maxDocsPerTask"
+                :is-uploading="isUploading(activity.id)"
+                :visible-docs="getVisibleDocs(activity)"
+                :pending-docs="getPendingDocs(activity.id)"
+                :deleted-docs="getDeletedDocs(activity)"
+                :remaining-slots="getRemainingSlots(activity)"
+                @set-status="(status) => emit('set-status', sectionIndex, moduleIndex, activityIndex, status)"
+                @update-notes="(value) => emit('update-notes', activity, value)"
+                @add-documentation="(files) => emit('add-documentation', activity, files)"
+                @remove-pending="(pendingId) => emit('remove-pending', activity.id, pendingId)"
+                @mark-delete="(docId) => emit('mark-delete', activity.id, docId)"
+                @undo-delete="(docId) => emit('undo-delete', activity.id, docId)"
+                @open-preview="(path, name, isLocal) => emit('open-preview', path, name, isLocal)"
+                @save="emit('save', activity)"
+              />
+            </div>
           </div>
         </div>
       </CollapsibleContent>

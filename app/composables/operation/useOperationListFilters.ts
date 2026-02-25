@@ -1,15 +1,41 @@
-import { OPERATION_TYPE_OPTIONS } from "@/constants/operation";
-import type { OperationType } from "../../../shared/types/operation";
+import {
+  OPERATION_STATUS_OPTIONS,
+  OPERATION_TYPE_OPTIONS,
+} from "@/constants/operation";
+import type { OperationStatus, OperationType } from "../../../shared/types/operation";
 
 const operationTypeValues = new Set(
   OPERATION_TYPE_OPTIONS.map((option) => option.value),
 );
 
-const parseOperationType = (value: unknown): OperationType | "ALL" => {
-  if (typeof value !== "string") return "ALL";
-  return operationTypeValues.has(value as OperationType)
-    ? (value as OperationType)
-    : "ALL";
+const operationStatusValues = new Set(
+  OPERATION_STATUS_OPTIONS.map((option) => option.value),
+);
+
+const parseTypeList = (value: unknown): OperationType[] => {
+  if (typeof value !== "string" || value.trim().length === 0) return [];
+
+  const parsed = value
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item): item is OperationType =>
+      operationTypeValues.has(item as OperationType),
+    );
+
+  return [...new Set(parsed)];
+};
+
+const parseStatusList = (value: unknown): OperationStatus[] => {
+  if (typeof value !== "string" || value.trim().length === 0) return [];
+
+  const parsed = value
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item): item is OperationStatus =>
+      operationStatusValues.has(item as OperationStatus),
+    );
+
+  return [...new Set(parsed)];
 };
 
 export const useOperationListFilters = () => {
@@ -17,19 +43,19 @@ export const useOperationListFilters = () => {
   const router = useRouter();
 
   const searchQuery = ref((route.query.search as string) || "");
-  const selectedType = ref<OperationType | "ALL">(
-    parseOperationType(route.query.type),
-  );
+  const selectedTypes = ref<OperationType[]>(parseTypeList(route.query.type));
   const selectedDate = ref((route.query.date as string) || "");
+  const selectedStatuses = ref<OperationStatus[]>(
+    parseStatusList(route.query.status),
+  );
   const currentPage = ref(Number(route.query.page) || 1);
-  const showMyOperationsOnly = ref(route.query.my === "true");
 
   const syncFromQuery = () => {
     searchQuery.value = (route.query.search as string) || "";
-    selectedType.value = parseOperationType(route.query.type);
+    selectedTypes.value = parseTypeList(route.query.type);
     selectedDate.value = (route.query.date as string) || "";
+    selectedStatuses.value = parseStatusList(route.query.status);
     currentPage.value = Number(route.query.page) || 1;
-    showMyOperationsOnly.value = route.query.my === "true";
   };
 
   watch(() => route.query, syncFromQuery, { immediate: true });
@@ -37,10 +63,16 @@ export const useOperationListFilters = () => {
   const pushQuery = () => {
     const nextQuery: Record<string, string | undefined> = {
       search: searchQuery.value || undefined,
-      type: selectedType.value === "ALL" ? undefined : selectedType.value,
+      type:
+        selectedTypes.value.length > 0
+          ? selectedTypes.value.join(",")
+          : undefined,
       date: selectedDate.value || undefined,
+      status:
+        selectedStatuses.value.length > 0
+          ? selectedStatuses.value.join(",")
+          : undefined,
       page: currentPage.value > 1 ? String(currentPage.value) : undefined,
-      my: showMyOperationsOnly.value ? "true" : undefined,
     };
 
     router.replace({ query: nextQuery });
@@ -63,7 +95,7 @@ export const useOperationListFilters = () => {
     }, 300);
   });
 
-  watch([selectedType, selectedDate, showMyOperationsOnly], () => {
+  watch([selectedTypes, selectedDate, selectedStatuses], () => {
     currentPage.value = 1;
     pushQuery();
   });
@@ -76,10 +108,10 @@ export const useOperationListFilters = () => {
 
   return {
     searchQuery,
-    selectedType,
+    selectedTypes,
     selectedDate,
+    selectedStatuses,
     currentPage,
-    showMyOperationsOnly,
     pushQuery,
   };
 };

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { toast, Toaster } from 'vue-sonner'
-import safedLogo from '@/assets/images/safed.png'
+import safedLogo from '/images/safedlogo.webp'
 
 definePageMeta({
   layout: false,

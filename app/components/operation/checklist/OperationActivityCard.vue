@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Camera, Check, Images, ImagePlus, X } from "lucide-vue-next";
+import { Camera, Check, Images, X, Upload } from "lucide-vue-next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,7 +44,7 @@ const showDocOptions = ref(false);
 
 const executorInitials = computed(() => {
   const rawName = props.activity.executedByName?.trim();
-  if (!rawName) return "CN";
+  if (!rawName) return "US";
 
   const nameParts = rawName.split(/\s+/).filter(Boolean);
   if (nameParts.length === 1) {
@@ -70,7 +70,13 @@ const onFilesPicked = (event: Event): void => {
 </script>
 
 <template>
-  <div class="mb-3 rounded-lg border border-gray-200 bg-white p-4">
+  <div
+    :class="
+      props.editable
+        ? 'rounded-none border-0 bg-transparent p-0'
+        : 'mb-3 rounded-lg border border-slate-200 bg-slate-50 p-4'
+    "
+  >
     <div v-if="!props.editable" class="mb-3 flex items-start justify-between">
       <div class="flex items-center gap-2 text-xs text-gray-500">
         <span class="rounded bg-gray-100 px-1 font-bold">{{ executorInitials }}</span>
@@ -91,16 +97,21 @@ const onFilesPicked = (event: Event): void => {
       <Badge v-else variant="outline" class="text-gray-400">Pending</Badge>
     </div>
 
-    <p class="mb-4 text-sm text-gray-900">
+    <p
+      class="mb-4 rounded-lg bg-slate-100 px-4 py-3 text-slate-700"
+    >
       {{ props.activity.jobDescription }}
     </p>
 
-    <div v-if="props.editable" class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <span class="text-sm font-medium text-gray-700">Condition</span>
-      <div class="flex gap-2">
+    <div
+      v-if="props.editable"
+      class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <span class="text-xl font-semibold text-slate-800">Condition</span>
+      <div class="grid grid-cols-2 gap-2">
         <Button
           size="sm"
-          class="h-8 w-12 bg-green-300 text-green-800 hover:bg-green-400"
+          class="h-10 w-30 rounded-xl bg-emerald-300 text-emerald-800 hover:bg-emerald-400"
           :class="
             props.activity.status === 'Good' ? 'ring-2 ring-green-500' : ''
           "
@@ -111,7 +122,7 @@ const onFilesPicked = (event: Event): void => {
         </Button>
         <Button
           size="sm"
-          class="h-8 w-12 bg-red-300 text-red-800 hover:bg-red-400"
+          class="h-10 w-30 rounded-xl bg-rose-300 text-rose-800 hover:bg-rose-400"
           :class="
             props.activity.status === 'Not Good' ? 'ring-2 ring-red-500' : ''
           "
@@ -123,48 +134,26 @@ const onFilesPicked = (event: Event): void => {
       </div>
     </div>
 
-    <Badge
-      v-if="props.activity.documentationRequired"
-      class="mb-3 border border-amber-200 bg-amber-100 text-amber-800"
-    >
-      Documentation Required
-    </Badge>
-
     <Textarea
       v-if="props.editable"
       :model-value="props.activity.notes || ''"
-      placeholder="Type activity note"
-      class="mb-4 bg-gray-50"
+      placeholder="Type note here…"
+      class="mb-4 min-h-[130px] rounded-xl border border-slate-200 bg-white text-base"
       @update:model-value="emit('update-notes', String($event || ''))"
     />
 
     <div v-if="props.editable" class="mb-4 space-y-3">
-      <div class="flex items-center justify-end">
-        <span
-          v-if="props.activity.documentationRequired"
-          class="text-xs text-gray-500"
-        >
-          Max {{ props.maxDocsPerTask }} photos
-        </span>
-        <span
-          v-else
-          class="text-xs text-gray-400"
-        >
-          Documentation upload disabled for this task
-        </span>
-      </div>
-
       <template v-if="props.activity.documentationRequired">
         <Button
           type="button"
           variant="outline"
           :disabled="props.isUploading || props.remainingSlots === 0"
-          class="w-full gap-2"
+          class="h-12 w-full gap-2 rounded-xl border-slate-200 bg-slate-100 text-base text-slate-600 hover:bg-slate-200"
           :aria-expanded="showDocOptions"
           aria-label="Open documentation upload options"
           @click="showDocOptions = !showDocOptions"
         >
-          <ImagePlus class="h-4 w-4" />
+          <Upload class="h-4 w-4" />
           Upload documentation
         </Button>
 
@@ -216,7 +205,7 @@ const onFilesPicked = (event: Event): void => {
           v-for="doc in props.visibleDocs"
           :key="doc.id"
           type="button"
-          class="relative overflow-hidden rounded border border-gray-200 hover:opacity-90"
+          class="relative overflow-hidden rounded border border-gray-200 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-800"
           :aria-label="`Preview uploaded photo ${doc.fileName}`"
           @click="emit('open-preview', doc.filePath, doc.fileName)"
         >
@@ -286,7 +275,7 @@ const onFilesPicked = (event: Event): void => {
         >
           <button
             type="button"
-            class="w-full"
+            class="w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-800"
             :aria-label="`Preview pending photo ${pendingDoc.file.name}`"
             @click="
               emit(
@@ -322,17 +311,6 @@ const onFilesPicked = (event: Event): void => {
       </div>
     </div>
 
-    <p
-      v-if="
-        props.editable &&
-        props.activity.documentationRequired &&
-        props.visibleDocs.length + props.pendingDocs.length === 0
-      "
-      class="mb-4 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700"
-    >
-      No documentation uploaded yet.
-    </p>
-
     <div
       v-if="!props.editable && props.activity.notes"
       class="rounded bg-slate-50 p-3 text-sm italic text-gray-600"
@@ -343,13 +321,14 @@ const onFilesPicked = (event: Event): void => {
       {{ props.activity.notes }}
     </div>
 
-    <Button
-      v-if="props.editable"
-      class="w-full bg-slate-100 font-medium text-slate-900 hover:bg-slate-200"
-      :disabled="props.isUploading"
-      @click="emit('save')"
-    >
-      {{ props.isUploading ? "Saving…" : "Save" }}
-    </Button>
+    <div v-if="props.editable" class="flex justify-end">
+      <Button
+        class="h-12 min-w-52 rounded-xl bg-slate-200 text-base font-semibold text-slate-900 hover:bg-slate-300"
+        :disabled="props.isUploading"
+        @click="emit('save')"
+      >
+        {{ props.isUploading ? "Saving…" : "Save" }}
+      </Button>
+    </div>
   </div>
 </template>
