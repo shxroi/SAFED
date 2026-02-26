@@ -1,10 +1,10 @@
-import { db } from '../../utils/baseDb'
+import { baseDb } from '../../utils/baseDb'
 import { operations, operationsEnroll, users } from '../../db/schema'
 
 export default defineEventHandler(async (event) => {
   try {
     // First, get all users
-    const allUsers = await db.select().from(users)
+    const allUsers = await baseDb.select().from(users)
     
     if (allUsers.length === 0) {
       return {
@@ -112,7 +112,7 @@ export default defineEventHandler(async (event) => {
     // Create operations and assign staff
     for (const opData of operationData) {
       // Create operation
-      const [newOp] = await db.insert(operations).values(opData).returning()
+      const [newOp] = await baseDb.insert(operations).values(opData).returning()
       
       if (!newOp) {
         console.error('Failed to create operation:', opData)
@@ -129,7 +129,7 @@ export default defineEventHandler(async (event) => {
       }
       
       // Add supervisor enrollment
-      await db.insert(operationsEnroll).values({
+      await baseDb.insert(operationsEnroll).values({
         operationId: newOp.id,
         userId: supervisor.id,
         operationRole: 'SUPERVISOR',
@@ -143,7 +143,7 @@ export default defineEventHandler(async (event) => {
         .slice(0, Math.min(numStaff, availableStaff.length))
       
       for (const staff of selectedStaff) {
-        await db.insert(operationsEnroll).values({
+        await baseDb.insert(operationsEnroll).values({
           operationId: newOp.id,
           userId: staff.id,
           operationRole: 'STAFF',

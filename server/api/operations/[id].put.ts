@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { db } from '../../utils/baseDb'
+import { baseDb } from '../../utils/baseDb'
 import { operations, operationsEnroll } from '../../db/schema'
 import { OPERATION_TYPES } from '../../../shared/types/operation'
 
@@ -81,7 +81,7 @@ export default defineEventHandler(async (event) => {
 
     const filteredStaffIds = supervisorId ? staffIds.filter((staffId) => staffId !== supervisorId) : staffIds
 
-    const updatedOperation = await db.transaction(async (tx) => {
+    const updatedOperation = await baseDb.transaction(async (tx) => {
       const [existingOperation] = await tx
         .select()
         .from(operations)

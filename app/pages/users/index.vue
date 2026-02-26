@@ -12,6 +12,8 @@ import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem } fro
 import { Popover, PopoverTrigger, PopoverContent } from "~/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Skeleton } from "~/components/ui/skeleton"
+import { ScrollArea } from "~/components/ui/scroll-area"
 
 const route = useRoute()
 const router = useRouter()
@@ -84,7 +86,7 @@ const updateURL = () => {
   }
 
   const currentQuery = route.query
-  const hasChanged = 
+  const hasChanged =
     newQuery.search !== (currentQuery.search || undefined) ||
     newQuery.page !== (currentQuery.page || undefined) ||
     newQuery.roles !== (currentQuery.roles || undefined) ||
@@ -218,118 +220,89 @@ const activeFilterCount = computed(() => {
 </script>
 
 <template>
-  <div class="p-4 md:p-8">
+  <div class="relative flex flex-col p-4 md:p-8">
     <!-- Header Section -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-      <div class="hidden md:flex justify-between items-center mb-10">
-        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Manage user</h1>
-      </div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight hidden md:block">Manage user</h1>
       <div class="flex items-center gap-3">
         <!-- Search Input -->
-        <div class="relative w-58">
+        <div class="relative ">
           <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input 
-            v-model="searchQuery"
-            placeholder="Search" 
-            class="pl-10 rounded-md bg-white border-gray-300 focus-visible:ring-gray-400"
-          />
+          <Input v-model="searchQuery" placeholder="Search"
+            class="pl-10 rounded-md bg-white border-gray-300 focus-visible:ring-gray-400" />
         </div>
 
         <!-- Filter Popover -->
-        <Popover :open="filterPopoverOpen" @update:open="filterPopoverOpen = $event">
+        <Popover>
           <PopoverTrigger as-child>
             <Button variant="outline" class="rounded-md border-gray-300 flex text-gray-600 gap-2 h-10 relative">
-              <Filter class="h-4 w-4 text-gray-500"/>
+              <Filter class="h-4 w-4 text-gray-500" />
               <span class="font-normal">Filter</span>
               <!-- Show badge if filters are active -->
-              <span 
-                v-if="activeFilterCount > 0" 
-                class="absolute -top-2 -right-2 bg-primary text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"
-              >
+              <span v-if="activeFilterCount > 0"
+                class="absolute -top-2 -right-2 bg-primary text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                 {{ activeFilterCount }}
               </span>
             </Button>
           </PopoverTrigger>
           <PopoverContent class="w-64 p-4 shadow-md rounded-lg" :side-offset="8">
             <div class="space-y-4">
-              <div> 
+              <div>
                 <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Roles</h4>
                 <div class="space-y-2">
                   <div v-for="role in roles" :key="role" class="flex justify-between items-center space-x-2">
                     <label :for="role" class="text-sm font-medium leading-none cursor-pointer">
-                      {{ role }}  
+                      {{ role }}
                     </label>
-                    <Checkbox 
-                      :id="role"
-                      :checked="selectedRoles.includes(role)"
-                      @click="toggleRole(role, !selectedRoles.includes(role))"
-                      @update:checked="(val: boolean) => toggleRole(role, val)"
-                    />
+                    <Checkbox :id="role" :default-value="selectedRoles.includes(role)"
+                      @click="toggleRole(role, !selectedRoles.includes(role))" />
                   </div>
                 </div>
               </div>
 
-              <Separator class="my-2"/>
+              <Separator class="my-2" />
 
               <div>
                 <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Status</h4>
                 <div class="space-y-2">
                   <div class="flex justify-between items-center space-x-2">
                     <label for="active" class="text-sm font-medium leading-none cursor-pointer ">Active</label>
-                    <Checkbox
-                      id="active"
-                      :checked="selectedStatuses.includes(true)"
-                      @click="toggleStatus(true, !selectedStatuses.includes(true))"
-                      @update:checked="(val: boolean) => toggleStatus(true, val)"
-                    />
+                    <Checkbox id="active" :default-value="selectedStatuses.includes(true)"
+                      @click="toggleStatus(true, !selectedStatuses.includes(true))" />
                   </div>
                   <div class="flex justify-between items-center space-x-2">
                     <label for="inactive" class="text-sm font-medium leading-none cursor-pointer">Inactive</label>
-                    <Checkbox 
-                      id="inactive"
-                      :checked="selectedStatuses.includes(false)"
+                    <Checkbox id="inactive" :default-value="selectedStatuses.includes(false)"
                       @click="toggleStatus(false, !selectedStatuses.includes(false))"
-                      @update:checked="(val: boolean) => toggleStatus(false, val)"
-                    />
+                      @update:checked="(val: boolean) => toggleStatus(false, val)" />
                   </div>
                 </div>
               </div>
 
               <div class="flex gap-2">
-                <Button 
-                  v-if="selectedRoles.length > 0 || selectedStatuses.length > 0"
-                  @click="handleClearFilters" 
-                  variant="outline"
-                  class="flex-1"
-                >
+                <Button v-if="selectedRoles.length > 0 || selectedStatuses.length > 0" @click="handleClearFilters"
+                  variant="outline" class="flex-1">
                   Clear
                 </Button>
-                <Button 
-                  @click="handleApplyFilter" 
-                  class="flex-1 bg-secondary text-primary hover:text-white medium rounded-md"
-                >
+                <Button @click="handleApplyFilter"
+                  class="flex-1 bg-secondary text-primary hover:text-white medium rounded-md">
                   Apply
                 </Button>
               </div>
             </div>
           </PopoverContent>
         </Popover>
-        
+
         <!-- Register Button -->
-        <Button 
-          @click="() => { selectedUser = undefined; dialogOpen = true }" 
-          class="rounded-md px-6 hover:bg-gray-500 text-white font-medium"
-        >
+        <Button @click="() => { selectedUser = undefined; dialogOpen = true }"
+          class="rounded-md px-6 hover:bg-gray-500 text-white font-medium">
           + New
         </Button>
       </div>
     </div>
 
-    <div v-if="pending">Loading...</div>
-    <div v-else-if="error">Error: {{ error.message }}</div>
-    <div v-else>
-      <Table class="shadow-md bg-white rounded-md">
-        <TableCaption>List of Users</TableCaption>
+    <ScrollArea class="w-full rounded-lg bg-background border shadow-xs bg-white">
+      <Table>
         <TableHeader>
           <TableRow>
             <TableHead>No</TableHead>
@@ -342,81 +315,114 @@ const activeFilterCount = computed(() => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow v-for="(user, index) in users" :key="user.id">
-            <TableCell>{{ (currentPage - 1) * itemsPerPage + index + 1 }}</TableCell>
-            <TableCell>{{ user.name }}</TableCell>
-            <TableCell>{{ user.username }}</TableCell>
-            <TableCell>{{ user.email }}</TableCell>
-            <TableCell>{{ user.roles }}</TableCell>
-            <TableCell>
-              <span :class="user.isActive ? 'bg-green-200 text-green-950 font-medium rounded-sm px-4 py-1' : 'bg-red-200 text-red-700 font-medium rounded-sm px-3 py-1'">
-                {{ user.isActive ? 'Active' : 'Inactive' }}
-              </span>
-            </TableCell>
-            <TableCell>
-              <DropdownMenu>
-                <DropdownMenuTrigger as-child>
-                  <Button variant="ghost" size="icon">
-                    <MoreVertical class="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" class="w-48">
-                  <DropdownMenuLabel class="flex justify-center">Action</DropdownMenuLabel>
-                  <DropdownMenuSeparator/>
-                  <DropdownMenuItem @click="handleEditUser(user)" class="flex justify-between items-center cursor-pointer">
-                    <span>Edit</span>
-                    <Pencil class="h-4 w-4" />
-                  </DropdownMenuItem>
-                  <DropdownMenuItem @click.stop="handleToggleStatus(user)" class="flex justify-between items-center cursor-pointer">
-                    <span>Status</span>
-                    <div :class="['w-8 h-4 rounded-full relative transition-colors', user.isActive ? 'bg-gray-900' : 'bg-gray-200']">
-                      <div :class="['absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all', user.isActive ? 'left-4' : 'left-0.5']"></div>
-                    </div>
-                  </DropdownMenuItem>  
-                  <DropdownMenuSeparator/>
-                  <DropdownMenuItem @click="() => { userIdToDelete = user.id; deleteDialogOpen = true }" class="flex justify-between items-center text-red-600 cursor-pointer">
-                    <span>Delete</span>
-                    <Trash class="h-4 w-4 text-red-600" />
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>  
-
-      <Pagination
-        v-model:page="currentPage"
-        :total="totalItems"
-        :items-per-page="itemsPerPage"
-        :sibling-count="1"
-        show-edges
-        as-child
-      >
-        <PaginationContent v-slot="{ items }" class="flex items-center justify-center mt-4 space-x-2">
-          <template v-for="(item, index) in items">
-            <PaginationItem v-if="item.type === 'page'" :key="index" :value="item.value" as-child>
-              <Button class="w-10 h-10 p-0" :variant="item.value === currentPage ? 'default' : 'ghost'">
-                {{ item.value }}
-              </Button>
-            </PaginationItem>
-            <PaginationEllipsis v-else :key="item.type" :index="index" />
+          <template v-if="pending">
+            <TableRow v-for="i in 7" :key="i">
+              <TableCell>
+                <Skeleton class="w-13 h-5" />
+              </TableCell>
+              <TableCell>
+                <Skeleton class="w-32 h-5" />
+              </TableCell>
+              <TableCell>
+                <Skeleton class="w-13 h-5" />
+              </TableCell>
+              <TableCell>
+                <Skeleton class="w-13 h-5" />
+              </TableCell>
+              <TableCell>
+                <Skeleton class="w-13 h-5" />
+              </TableCell>
+              <TableCell>
+                <Skeleton class="w-13 h-5" />
+              </TableCell>
+              <TableCell>
+                <Skeleton class="w-13 h-5" />
+              </TableCell>
+            </TableRow>
           </template>
-        </PaginationContent>
-      </Pagination>
-    </div>
+          <template v-if="error">
+            <TableRow>
+              <TableCell colSpan="7" class="text-center h-32">
+                Something went wrong...
+              </TableCell>
+            </TableRow>
+          </template>
+          <template v-else>
+            <template v-if="users.length > 0">
+              <TableRow v-for="(user, index) in users" :key="user.id">
+                <TableCell>{{ (currentPage - 1) * itemsPerPage + index + 1 }}</TableCell>
+                <TableCell>{{ user.name }}</TableCell>
+                <TableCell>{{ user.username }}</TableCell>
+                <TableCell>{{ user.email }}</TableCell>
+                <TableCell>{{ user.roles }}</TableCell>
+                <TableCell>
+                  <Badge :variant="user.isActive ? 'success' : 'destructive'">{{ user.isActive ? 'Active' : 'Inactive'
+                  }}</Badge>
+                </TableCell>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger as-child>
+                      <Button variant="ghost" size="icon">
+                        <MoreVertical class="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" class="w-48">
+                      <DropdownMenuLabel class="flex justify-center">Action</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem @click="handleEditUser(user)"
+                        class="flex justify-between items-center cursor-pointer">
+                        <span>Edit</span>
+                        <Pencil class="h-4 w-4" />
+                      </DropdownMenuItem>
+                      <DropdownMenuItem @click.stop="handleToggleStatus(user)"
+                        class="flex justify-between items-center cursor-pointer">
+                        <span>Status</span>
+                        <div
+                          :class="['w-8 h-4 rounded-full relative transition-colors', user.isActive ? 'bg-gray-900' : 'bg-gray-200']">
+                          <div
+                            :class="['absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all', user.isActive ? 'left-4' : 'left-0.5']">
+                          </div>
+                        </div>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem @click="() => { userIdToDelete = user.id; deleteDialogOpen = true }"
+                        class="flex justify-between items-center text-red-600 cursor-pointer">
+                        <span>Delete</span>
+                        <Trash class="h-4 w-4 text-red-600" />
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            </template>
+            <template v-else>
+              <TableRow>
+                <TableCell colSpan="7" class="text-center h-32">
+                  No Data...
+                </TableCell>
+              </TableRow>
+            </template>
+          </template>
+        </TableBody>
+      </Table>
+    </ScrollArea>
+    <Pagination v-model:page="currentPage" :total="totalItems" :items-per-page="itemsPerPage" :sibling-count="1"
+      show-edges as-child>
+      <PaginationContent v-slot="{ items }" class="flex items-center justify-center mt-4 space-x-2">
+        <template v-for="(item, index) in items">
+          <PaginationItem v-if="item.type === 'page'" :key="index" :value="item.value" as-child>
+            <Button class="w-10 h-10 p-0" :variant="item.value === currentPage ? 'default' : 'ghost'">
+              {{ item.value }}
+            </Button>
+          </PaginationItem>
+          <PaginationEllipsis v-else :key="item.type" :index="index" />
+        </template>
+      </PaginationContent>
+    </Pagination>
   </div>
 
-  <DeleteConfirmDialog 
-    :open="deleteDialogOpen" 
-    @update:open="deleteDialogOpen = $event" 
-    @confirm="confirmDelete" 
-  />
+  <DeleteConfirmDialog :open="deleteDialogOpen" @update:open="deleteDialogOpen = $event" @confirm="confirmDelete" />
 
-  <UserFormDialog
-    :open="dialogOpen"
-    :user="selectedUser || undefined"
-    @update:open="dialogOpen = $event"
-    @submit="refresh()"
-  />
+  <UserFormDialog :open="dialogOpen" :user="selectedUser || undefined" @update:open="dialogOpen = $event"
+    @submit="refresh()" />
 </template>

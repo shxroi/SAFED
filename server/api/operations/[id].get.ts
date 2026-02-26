@@ -1,4 +1,4 @@
-import { db } from '../../utils/baseDb'
+import { baseDb } from '~~/server/utils/baseDb'
 import { fieldReports, operations, operationsEnroll, users } from '../../db/schema'
 import { and, eq } from 'drizzle-orm'
 
@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
     const userId = Number(sessionUser.id)
 
     // Get operation
-    const [operationRow] = await db
+    const [operationRow] = await baseDb
       .select({
         operation: operations,
         reportPdfPath: fieldReports.pdfPath,
@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
     const operation = operationRow.operation
 
     if (sessionUser.roles === 'STAFF') {
-      const [userEnrollment] = await db
+      const [userEnrollment] = await baseDb
         .select({ id: operationsEnroll.id })
         .from(operationsEnroll)
         .where(and(eq(operationsEnroll.operationId, id), eq(operationsEnroll.userId, userId)))
@@ -62,7 +62,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Get enrollments with user details
-    const enrollments = await db
+    const enrollments = await baseDb
       .select({
         id: operationsEnroll.id,
         userId: operationsEnroll.userId,

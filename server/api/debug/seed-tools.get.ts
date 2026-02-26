@@ -1,11 +1,11 @@
-import { db } from '../../utils/baseDb'
+import { baseDb } from '../../utils/baseDb'
 import { tools } from '../../db/schema'
 import { eq } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   try {
     // 1. Check if dummy data already exists (check first tool)
-    const [existing] = await db.select().from(tools).where(eq(tools.name, 'Tang Potong')).limit(1)
+    const [existing] = await baseDb.select().from(tools).where(eq(tools.name, 'Tang Potong')).limit(1)
     if (existing) {
       return { 
         success: false, 
@@ -37,7 +37,7 @@ export default defineEventHandler(async (event) => {
     ]
 
     // 3. Insert data in batch
-    await db.insert(tools).values(dummyTools)
+    await baseDb.insert(tools).values(dummyTools)
 
     return {
       success: true,

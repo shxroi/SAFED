@@ -2,7 +2,6 @@ import { mkdir, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "../../../utils/baseDb";
 import {
   fieldDocumentations,
   fieldReportNoteDocumentations,
@@ -14,6 +13,7 @@ import {
   users,
 } from "../../../db/schema";
 import { buildFieldReportPdf } from "../../../utils/reportPdf";
+import { baseDb } from "~~/server/utils/baseDb";
 
 const reportPayloadSchema = z
   .object({
@@ -91,7 +91,7 @@ export default defineEventHandler(async (event) => {
     const payload = parsed.data;
     const normalizedCrewName = payload.crewSignRequired ? payload.crewName : "";
 
-    const [operation] = await db
+    const [operation] = await baseDb
       .select({
         id: operations.id,
         status: operations.status,
@@ -115,7 +115,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const [supervisorEnrollment] = await db
+    const [supervisorEnrollment] = await baseDb
       .select({
         id: operationsEnroll.id,
         supervisorName: users.name,
@@ -154,7 +154,7 @@ export default defineEventHandler(async (event) => {
     }> = [];
 
     if (requestedDocIds.length > 0) {
-      validDocs = await db
+      validDocs = await baseDb
         .select({
           id: fieldDocumentations.id,
           fileName: fieldDocumentations.fileName,
@@ -217,7 +217,7 @@ export default defineEventHandler(async (event) => {
     await mkdir(reportDir, { recursive: true });
     await writeFile(diskPath, reportPdfBytes);
 
-    const reportResult = await db
+    const reportResult = await baseDb
       .transaction(async (tx) => {
         const [existingReport] = await tx
           .select({ id: fieldReports.id, pdfPath: fieldReports.pdfPath })

@@ -1,4 +1,4 @@
-import { db } from "../../utils/baseDb";
+import { baseDb } from "../../utils/baseDb";
 import { operations, operationsEnroll, users } from "../../db/schema";
 import { eq, inArray, and, like, or, sql, desc } from "drizzle-orm";
 
@@ -52,7 +52,7 @@ export default defineEventHandler(async (event) => {
 
     if (myOnly) {
       // Filter for operations where the user is enrolled
-      const userEnrollments = await db
+      const userEnrollments = await baseDb
         .select({ operationId: operationsEnroll.operationId })
         .from(operationsEnroll)
         .where(eq(operationsEnroll.userId, userId));
@@ -71,7 +71,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Fetch filtered operations
-    const filteredOperations = await db
+    const filteredOperations = await baseDb
       .select({
         id: operations.id,
         company: operations.company,
@@ -88,7 +88,7 @@ export default defineEventHandler(async (event) => {
 
     // Fetch user's enrollments for the filtered operations
     // We still need this to determine the user's role in each operation
-    const enrollments = await db
+    const enrollments = await baseDb
       .select({
         operationId: operationsEnroll.operationId,
         role: operationsEnroll.operationRole,
@@ -108,7 +108,7 @@ export default defineEventHandler(async (event) => {
     let supervisorMap = new Map();
 
     if (operationIds.length > 0) {
-      const supervisors = await db
+      const supervisors = await baseDb
         .select({
           operationId: operationsEnroll.operationId,
           userId: operationsEnroll.userId,

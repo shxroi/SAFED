@@ -1,4 +1,4 @@
-import { db } from '../utils/baseDb'
+import { baseDb } from '../utils/baseDb'
 import { tools } from '../db/schema'
 import { z } from 'zod'
 
@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    const [newTool] = await db.insert(tools).values(result.data).returning()
+    const [newTool] = await baseDb.insert(tools).values(result.data).returning()
     return { success: true, data: newTool }
   } catch (error: any) {
     throw createError({

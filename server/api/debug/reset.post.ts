@@ -1,16 +1,16 @@
-import { db } from '../../utils/baseDb'
+import { baseDb } from '../../utils/baseDb'
 import { users } from '../../db/schema'
 import { hashPassword } from '../../utils/password'
 
 export default defineEventHandler(async (event) => {
   try {
     // 1. Delete ALL users
-    await db.delete(users)
+    await baseDb.delete(users)
 
     // 2. Create one fresh admin
     const hashedPassword = await hashPassword('Admin123')
 
-    const [newUser] = await db.insert(users).values({
+    const [newUser] = await baseDb.insert(users).values({
       name: 'System Admin',
       username: 'admin',
       email: 'admin@safed.id',

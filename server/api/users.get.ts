@@ -1,4 +1,4 @@
-import { db } from '../utils/baseDb'
+import { baseDb } from '../utils/baseDb'
 import { users } from '../db/schema'
 import { and, ilike, or, inArray, count, desc } from 'drizzle-orm'
 
@@ -113,14 +113,14 @@ export default defineEventHandler(async (event) => {
 
   // --- Execute queries ---
   const [rows, totalRes] = await Promise.all([
-    db
+    baseDb
       .select()
       .from(users)
       .where(whereClause)
       .limit(limit)
       .offset(offset)
       .orderBy(desc(users.id)),
-    db
+    baseDb
       .select({ value: count() })
       .from(users)
       .where(whereClause),

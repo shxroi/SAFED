@@ -1,4 +1,4 @@
-import { db } from '../../utils/baseDb'
+import { baseDb } from '../../utils/baseDb'
 import { tools } from '../../db/schema'
 import { eq } from 'drizzle-orm'
 
@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, message: 'Invalid tool ID' })
     }
 
-    const deleted = await db
+    const deleted = await baseDb
       .delete(tools)
       .where(eq(tools.id, id))
       .returning()

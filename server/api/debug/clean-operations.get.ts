@@ -1,4 +1,4 @@
-import { db } from "../../utils/baseDb";
+import { baseDb } from "../../utils/baseDb";
 import {
   fieldReportNoteDocumentations,
   fieldReportNotes,
@@ -32,31 +32,31 @@ export default defineEventHandler(async (event) => {
 
     // Delete in reverse FK dependency order
 
-    const deletedReportNoteDocs = await db
+    const deletedReportNoteDocs = await baseDb
       .delete(fieldReportNoteDocumentations)
       .returning({ id: fieldReportNoteDocumentations.id });
-    const deletedReportNotes = await db
+    const deletedReportNotes = await baseDb
       .delete(fieldReportNotes)
       .returning({ id: fieldReportNotes.id });
-    const deletedReports = await db
+    const deletedReports = await baseDb
       .delete(fieldReports)
       .returning({ id: fieldReports.id });
-    const deletedDocs = await db
+    const deletedDocs = await baseDb
       .delete(fieldDocumentations)
       .returning({ id: fieldDocumentations.id });
-    const deletedJobs = await db
+    const deletedJobs = await baseDb
       .delete(operationJobLists)
       .returning({ id: operationJobLists.id });
-    const deletedTools = await db
+    const deletedTools = await baseDb
       .delete(operationTools)
       .returning({ id: operationTools.id });
-    const deletedSections = await db
+    const deletedSections = await baseDb
       .delete(jobsection)
       .returning({ id: jobsection.id });
-    const deletedEnrolls = await db
+    const deletedEnrolls = await baseDb
       .delete(operationsEnroll)
       .returning({ id: operationsEnroll.id });
-    const deletedOps = await db
+    const deletedOps = await baseDb
       .delete(operations)
       .returning({ id: operations.id });
 

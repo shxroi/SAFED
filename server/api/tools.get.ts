@@ -1,4 +1,4 @@
-import { db } from "../utils/baseDb";
+import { baseDb } from "../utils/baseDb";
 import { tools } from "../db/schema";
 import { asc, count, ilike } from "drizzle-orm";
 
@@ -39,14 +39,14 @@ export default defineEventHandler(async (event) => {
   const whereClause = search ? ilike(tools.name, `%${search}%`) : undefined;
 
   const [rows, totalRes] = await Promise.all([
-    db
+    baseDb
       .select()
       .from(tools)
       .where(whereClause)
       .orderBy(asc(tools.name))
       .limit(limit)
       .offset(offset),
-    db.select({ value: count() }).from(tools).where(whereClause),
+    baseDb.select({ value: count() }).from(tools).where(whereClause),
   ]);
 
   const total = Number(totalRes[0]?.value || 0);

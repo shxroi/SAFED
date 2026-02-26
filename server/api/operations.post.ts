@@ -1,4 +1,4 @@
-import { db } from '../utils/baseDb'
+import { baseDb } from '../utils/baseDb'
 import { operations, operationsEnroll } from '../db/schema'
 import { OPERATION_TYPES } from '../../shared/types/operation'
 
@@ -70,7 +70,7 @@ export default defineEventHandler(async (event) => {
 
     const filteredStaffIds = supervisorId ? staffIds.filter((id) => id !== supervisorId) : staffIds
 
-    const newOperation = await db.transaction(async (tx) => {
+    const newOperation = await baseDb.transaction(async (tx) => {
       const [created] = await tx
         .insert(operations)
         .values({

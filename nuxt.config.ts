@@ -11,6 +11,7 @@ export default defineNuxtConfig({
     '@nuxt/image',
     '@nuxthub/core',
     '@nuxt/test-utils',
+    '@pinia/nuxt',
   ],
   shadcn: {
     /**

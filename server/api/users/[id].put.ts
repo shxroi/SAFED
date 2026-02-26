@@ -1,4 +1,4 @@
-import { db } from '../../utils/baseDb';
+import { baseDb } from '../../utils/baseDb';
 import { users } from '../../db/schema';
 import { userUpdateSchema } from '../../../shared/schemas/userSchema';
 import { hashPassword } from '../../utils/password';
@@ -86,7 +86,7 @@ export default defineEventHandler(async (event) => {
 
     // --- Check for duplicate email (exclude current user) ---
     if (validatedData.email) {
-      const existingEmail = await db.select().from(users)
+      const existingEmail = await baseDb.select().from(users)
         .where(and(
           eq(users.email, validatedData.email),
           ne(users.id, userId)
@@ -104,7 +104,7 @@ export default defineEventHandler(async (event) => {
 
     // --- Check for duplicate username (exclude current user) ---
     if (validatedData.username) {
-      const existingUsername = await db.select().from(users)
+      const existingUsername = await baseDb.select().from(users)
         .where(and(
           eq(users.username, validatedData.username),
           ne(users.id, userId)
@@ -120,7 +120,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    const [updatedUser] = await db.update(users)
+    const [updatedUser] = await baseDb.update(users)
       .set(updateData)
       .where(eq(users.id, userId))
       .returning()

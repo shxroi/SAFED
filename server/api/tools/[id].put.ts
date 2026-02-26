@@ -1,4 +1,4 @@
-import { db } from '../../utils/baseDb'
+import { baseDb } from '../../utils/baseDb'
 import { tools } from '../../db/schema'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
@@ -39,7 +39,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const [updated] = await db
+    const [updated] = await baseDb
     .update(tools)
     .set(result.data)
     .where(eq(tools.id, id))

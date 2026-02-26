@@ -1,4 +1,4 @@
-import { db } from '../../utils/baseDb';
+import { baseDb } from '../../utils/baseDb';
 import { users } from '../../db/schema';
 import { loginSchema } from '../../../shared/schemas/userSchema';
 import { eq } from 'drizzle-orm';
@@ -33,10 +33,10 @@ export default defineEventHandler(async (event) => {
     const { username, password } = result.data
 
     // --- Find user by username (query only once!) ---
-    const [foundUser] = await db.select().from(users)
+    const [foundUser] = await baseDb.select().from(users)
       .where(eq(users.username, username))
       .limit(1)
-
+    
     if (!foundUser) {
       throw createError({
         statusCode: 401,

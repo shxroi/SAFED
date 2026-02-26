@@ -1,5 +1,5 @@
 import { and, desc, eq, gte, ilike, lte, or } from 'drizzle-orm'
-import { db } from '../utils/baseDb'
+import { baseDb } from '../utils/baseDb'
 import { operationJobLists, operations, operationsEnroll, operationTools, users } from '../db/schema'
 import {
   OPERATION_STATUSES,
@@ -151,7 +151,7 @@ export default defineEventHandler(async (event) => {
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
     const operationsList = userRole === 'STAFF'
-      ? await db
+      ? await baseDb
           .select({
             id: operations.id,
             company: operations.company,
@@ -170,7 +170,7 @@ export default defineEventHandler(async (event) => {
               : eq(operationsEnroll.userId, userId)
           )
           .orderBy(desc(operations.createdAt))
-      : await db
+      : await baseDb
           .select({
             id: operations.id,
             company: operations.company,
@@ -188,7 +188,7 @@ export default defineEventHandler(async (event) => {
     const operationsWithDetails = await Promise.all(
       operationsList.map(async (operation) => {
         const [enrollments, tools, tasks] = await Promise.all([
-          db
+          baseDb
             .select({
               userId: operationsEnroll.userId,
               operationRole: operationsEnroll.operationRole,
@@ -197,14 +197,14 @@ export default defineEventHandler(async (event) => {
             .from(operationsEnroll)
             .leftJoin(users, eq(operationsEnroll.userId, users.id))
             .where(eq(operationsEnroll.operationId, operation.id)),
-          db
+          baseDb
             .select({
               preStatus: operationTools.preStatus,
               postStatus: operationTools.postStatus,
             })
             .from(operationTools)
             .where(eq(operationTools.operationId, operation.id)),
-          db
+          baseDb
             .select({ status: operationJobLists.status })
             .from(operationJobLists)
             .where(eq(operationJobLists.operationId, operation.id)),

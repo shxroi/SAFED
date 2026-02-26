@@ -1,4 +1,4 @@
-import { db } from "../../utils/baseDb";
+import { baseDb } from "../../utils/baseDb";
 import {
   fieldDocumentations,
   operationJobLists,
@@ -49,7 +49,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    await db.transaction(async (tx) => {
+    await baseDb.transaction(async (tx) => {
       const [operation] = await tx
         .select()
         .from(operations)

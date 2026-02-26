@@ -1,4 +1,4 @@
-import { db } from '../../utils/baseDb'
+import { baseDb } from '../../utils/baseDb'
 import { operations } from '../../db/schema'
 import { eq } from 'drizzle-orm'
 
@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Check if operation exists
-    const [operation] = await db
+    const [operation] = await baseDb
       .select()
       .from(operations)
       .where(eq(operations.id, id))
@@ -77,7 +77,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Update status
-    const [updatedOperation] = await db
+    const [updatedOperation] = await baseDb
       .update(operations)
       .set({ status })
       .where(eq(operations.id, id))

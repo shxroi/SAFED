@@ -1,4 +1,4 @@
-import { db } from "../../../../utils/baseDb";
+import { baseDb } from "~~/server/utils/baseDb";
 import {
   operationJobLists,
   operations,
@@ -48,7 +48,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Verify user is enrolled in this operation
-    const [enrollment] = await db
+    const [enrollment] = await baseDb
       .select()
       .from(operationsEnroll)
       .where(
@@ -66,7 +66,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const [operation] = await db
+    const [operation] = await baseDb
       .select({ id: operations.id, status: operations.status })
       .from(operations)
       .where(eq(operations.id, operationId))
@@ -109,7 +109,7 @@ export default defineEventHandler(async (event) => {
 
     // Update the task status and notes
     // We also track who updated it (executedBy)
-    const updated = await db
+    const updated = await baseDb
       .update(operationJobLists)
       .set({
         status: status || null,

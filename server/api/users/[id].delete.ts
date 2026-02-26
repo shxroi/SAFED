@@ -1,4 +1,4 @@
-import { db } from '../../utils/baseDb'
+import { baseDb } from '../../utils/baseDb'
 import { users } from '../../db/schema'
 import { eq } from 'drizzle-orm'
 
@@ -18,7 +18,7 @@ export default defineEventHandler(async(event) => {
     throw createError({ statusCode: 400, message: 'Invalid user ID' })
   }
 
-  const result = await db.delete(users).where(eq(users.id, id)).returning()
+  const result = await baseDb.delete(users).where(eq(users.id, id)).returning()
   if (result.length === 0) {
     throw createError({ statusCode: 404, message: 'User not found' })
   }

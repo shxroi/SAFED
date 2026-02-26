@@ -1,4 +1,4 @@
-import { db } from "../../../utils/baseDb";
+import { baseDb } from "../../../utils/baseDb";
 import {
   fieldDocumentations,
   operationJobLists,
@@ -47,7 +47,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Verify user is enrolled as SUPERVISOR for this operation
-    const enrollment = await db
+    const enrollment = await baseDb
       .select()
       .from(operationsEnroll)
       .where(
@@ -66,7 +66,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const [operation] = await db
+    const [operation] = await baseDb
       .select({ id: operations.id, status: operations.status })
       .from(operations)
       .where(eq(operations.id, operationId))
@@ -87,7 +87,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const [pendingTasks, pendingToolPre, pendingToolPost] = await Promise.all([
-      db
+      baseDb
         .select({ id: operationJobLists.id })
         .from(operationJobLists)
         .where(
@@ -97,7 +97,7 @@ export default defineEventHandler(async (event) => {
           ),
         )
         .limit(1),
-      db
+      baseDb
         .select({ id: operationTools.id })
         .from(operationTools)
         .where(
@@ -107,7 +107,7 @@ export default defineEventHandler(async (event) => {
           ),
         )
         .limit(1),
-      db
+      baseDb
         .select({ id: operationTools.id })
         .from(operationTools)
         .where(
@@ -131,7 +131,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const requiredTasks = await db
+    const requiredTasks = await baseDb
       .select({ id: operationJobLists.id })
       .from(operationJobLists)
       .where(
@@ -147,7 +147,7 @@ export default defineEventHandler(async (event) => {
       );
 
       if (requiredTaskIds.length > 0) {
-        const docs = await db
+        const docs = await baseDb
           .select({ joblistId: fieldDocumentations.joblistId })
           .from(fieldDocumentations)
           .where(inArray(fieldDocumentations.joblistId, requiredTaskIds));
@@ -168,7 +168,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Update operation status to Complete
-    await db
+    await baseDb
       .update(operations)
       .set({ status: "Complete" })
       .where(eq(operations.id, operationId));

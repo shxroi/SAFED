@@ -1,5 +1,5 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { db } from "../../../utils/baseDb";
+import { baseDb } from "../../../utils/baseDb";
 import {
   fieldDocumentations,
   fieldReportNoteDocumentations,
@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, message: "Invalid operation ID" });
     }
 
-    const [operation] = await db
+    const [operation] = await baseDb
       .select({
         id: operations.id,
         status: operations.status,
@@ -45,7 +45,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, message: "Operation not found" });
     }
 
-    const [userEnrollment] = await db
+    const [userEnrollment] = await baseDb
       .select({
         id: operationsEnroll.id,
         operationRole: operationsEnroll.operationRole,
@@ -65,7 +65,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    const [supervisor] = await db
+    const [supervisor] = await baseDb
       .select({
         supervisorName: users.name,
       })
@@ -83,7 +83,7 @@ export default defineEventHandler(async (event) => {
       userEnrollment?.operationRole === "SUPERVISOR" &&
       operation.status === "Complete";
 
-    const [report] = await db
+    const [report] = await baseDb
       .select({
         id: fieldReports.id,
         referenceNumber: fieldReports.referenceNumber,
@@ -97,7 +97,7 @@ export default defineEventHandler(async (event) => {
       .where(eq(fieldReports.operationId, operationId))
       .limit(1);
 
-    const availableDocumentations = await db
+    const availableDocumentations = await baseDb
       .select({
         id: fieldDocumentations.id,
         taskId: fieldDocumentations.joblistId,
@@ -128,7 +128,7 @@ export default defineEventHandler(async (event) => {
       };
     }
 
-    const notes = await db
+    const notes = await baseDb
       .select({
         id: fieldReportNotes.id,
         note: fieldReportNotes.note,
@@ -146,7 +146,7 @@ export default defineEventHandler(async (event) => {
     }> = [];
 
     if (noteIds.length > 0) {
-      linkedDocs = await db
+      linkedDocs = await baseDb
         .select({
           noteId: fieldReportNoteDocumentations.noteId,
           documentationId: fieldReportNoteDocumentations.documentationId,

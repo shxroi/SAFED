@@ -1,11 +1,11 @@
-import { db } from '../../utils/baseDb'
+import { baseDb } from '../../utils/baseDb'
 import { users } from '../../db/schema'
 import { eq } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   try {
     // 1. Cek apakah sudah ada data dummy (ceki user pertama 'alicej')
-    const [existing] = await db.select().from(users).where(eq(users.username, 'alicej')).limit(1)
+    const [existing] = await baseDb.select().from(users).where(eq(users.username, 'alicej')).limit(1)
     if (existing) return { success: false, message: 'Dummy data already seeded' }
 
     // 2. Data dari SQL yang Anda berikan (Password: Password123)
@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
     ]
 
     // 3. Masukkan data (Batch insert)
-    await db.insert(users).values(dummyData as any)
+    await baseDb.insert(users).values(dummyData as any)
 
     return {
       success: true,

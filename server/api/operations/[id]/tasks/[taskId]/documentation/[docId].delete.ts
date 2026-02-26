@@ -1,13 +1,13 @@
 import { unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { and, eq } from "drizzle-orm";
-import { db } from "../../../../../../utils/baseDb";
 import {
   fieldDocumentations,
   operationJobLists,
   operations,
   operationsEnroll,
 } from "../../../../../../db/schema";
+import { baseDb } from "~~/server/utils/baseDb";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const [enrollment] = await db
+    const [enrollment] = await baseDb
       .select({ id: operationsEnroll.id })
       .from(operationsEnroll)
       .where(
@@ -56,7 +56,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const [operation] = await db
+    const [operation] = await baseDb
       .select({ id: operations.id, status: operations.status })
       .from(operations)
       .where(eq(operations.id, operationId))
@@ -73,7 +73,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const [task] = await db
+    const [task] = await baseDb
       .select({ id: operationJobLists.id })
       .from(operationJobLists)
       .where(
@@ -88,7 +88,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, message: "Task not found" });
     }
 
-    const [documentation] = await db
+    const [documentation] = await baseDb
       .select({
         id: fieldDocumentations.id,
         filePath: fieldDocumentations.filePath,
@@ -109,7 +109,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    await db
+    await baseDb
       .delete(fieldDocumentations)
       .where(eq(fieldDocumentations.id, documentation.id));
 

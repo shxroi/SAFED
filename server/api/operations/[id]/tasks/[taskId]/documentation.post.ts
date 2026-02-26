@@ -3,7 +3,7 @@ import { mkdir, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { and, eq, sql } from "drizzle-orm";
 import sharp from "sharp";
-import { db } from "../../../../../utils/baseDb";
+import { baseDb } from "../../../../../utils/baseDb";
 import {
   fieldDocumentations,
   operationJobLists,
@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const [enrollment] = await db
+    const [enrollment] = await baseDb
       .select({ id: operationsEnroll.id })
       .from(operationsEnroll)
       .where(
@@ -58,7 +58,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const [operation] = await db
+    const [operation] = await baseDb
       .select({ id: operations.id, status: operations.status })
       .from(operations)
       .where(eq(operations.id, operationId))
@@ -75,7 +75,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const [task] = await db
+    const [task] = await baseDb
       .select({
         id: operationJobLists.id,
         documentationRequired: operationJobLists.documentationRequired,
@@ -152,7 +152,7 @@ export default defineEventHandler(async (event) => {
 
     const publicPath = `/uploads/${storageKey}`;
 
-    const [documentation] = await db
+    const [documentation] = await baseDb
       .transaction(async (tx) => {
         await tx.execute(
           sql`SELECT ${operationJobLists.id} FROM ${operationJobLists} WHERE ${operationJobLists.id} = ${taskId} AND ${operationJobLists.operationId} = ${operationId} FOR UPDATE`,

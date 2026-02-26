@@ -1,8 +1,8 @@
-import { db } from '../../utils/baseDb'
+import { baseDb } from '../../utils/baseDb'
 import { users } from '../../db/schema'
 
 export default defineEventHandler(async (event) => {
-  const allUsers = await db.select().from(users)
+  const allUsers = await baseDb.select().from(users)
   
   return allUsers.map(u => ({
     id: u.id,

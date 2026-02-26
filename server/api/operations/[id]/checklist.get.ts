@@ -1,4 +1,4 @@
-import { db } from "../../../utils/baseDb";
+import { baseDb } from "~~/server/utils/baseDb";
 import {
   operationTools,
   jobsection,
@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
     }
 
     if (sessionUser.roles === "STAFF") {
-      const [enrollment] = await db
+      const [enrollment] = await baseDb
         .select({ id: operationsEnroll.id })
         .from(operationsEnroll)
         .where(
@@ -67,7 +67,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Fetch tools with their names and status from the tools table
-    const tools = await db
+    const tools = await baseDb
       .select({
         id: operationTools.id,
         operationId: operationTools.operationId,
@@ -84,13 +84,13 @@ export default defineEventHandler(async (event) => {
       .where(eq(operationTools.operationId, operationId));
 
     // Fetch sections
-    const sections = await db
+    const sections = await baseDb
       .select()
       .from(jobsection)
       .where(eq(jobsection.operationId, operationId));
 
     // Fetch all activities with executor details
-    const activities = await db
+    const activities = await baseDb
       .select({
         id: operationJobLists.id,
         operationId: operationJobLists.operationId,
@@ -118,7 +118,7 @@ export default defineEventHandler(async (event) => {
     }> = [];
 
     if (activityIds.length > 0) {
-      docs = await db
+      docs = await baseDb
         .select({
           id: fieldDocumentations.id,
           joblistId: fieldDocumentations.joblistId,

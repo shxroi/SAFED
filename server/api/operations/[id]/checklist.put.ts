@@ -1,5 +1,5 @@
 import { eq, inArray } from "drizzle-orm";
-import { db } from "../../../utils/baseDb";
+import { baseDb } from "../../../utils/baseDb";
 import {
   jobsection,
   operationJobLists,
@@ -106,7 +106,7 @@ export default defineEventHandler(async (event) => {
       }, new Map<number, number>()),
     ).map(([toolId, quantity]) => ({ toolId, quantity }));
 
-    await db.transaction(async (tx) => {
+    await  baseDb.transaction(async (tx) => {
       await tx
         .delete(operationTools)
         .where(eq(operationTools.operationId, operationId));

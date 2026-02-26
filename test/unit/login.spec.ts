@@ -43,7 +43,7 @@ describe('Auth: Login API', () => {
   it('should return 401 for invalid credentials', async () => {
     const mockEvent = {} as any
     vi.mocked(readBody).mockResolvedValue({ username: 'wrong', password: 'password' })
-    vi.mocked(db.limit).mockResolvedValue([])
+    vi.mocked(baseDb.limit).mockResolvedValue([])
 
     await expect(loginHandler(mockEvent)).rejects.toMatchObject({
       statusCode: 401,
@@ -54,7 +54,7 @@ describe('Auth: Login API', () => {
   it('should return 401 if password does not match', async () => {
     const mockEvent = {} as any
     vi.mocked(readBody).mockResolvedValue({ username: 'admin', password: 'wrongpassword' })
-    vi.mocked(db.limit).mockResolvedValue([{ 
+    vi.mocked(baseDb.limit).mockResolvedValue([{ 
         id: 1, 
         username: 'admin', 
         password: 'hashed_password',
@@ -81,7 +81,7 @@ describe('Auth: Login API', () => {
     }
 
     vi.mocked(readBody).mockResolvedValue({ username: 'admin', password: 'Admin123' })
-    vi.mocked(db.limit).mockResolvedValue([mockUser])
+    vi.mocked(baseDb.limit).mockResolvedValue([mockUser])
     vi.mocked(verifyPassword).mockResolvedValue(true)
 
     const result = await loginHandler(mockEvent)

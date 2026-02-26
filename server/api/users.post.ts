@@ -1,4 +1,4 @@
-import { db } from '../utils/baseDb';
+import { baseDb } from '../utils/baseDb';
 import { users } from '../db/schema';
 import { userCreateSchema } from '../../shared/schemas/userSchema';
 import { hashPassword } from '../utils/password';
@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
     const validatedData = result.data
 
     // --- Check for duplicate email ---
-    const existingEmail = await db.select().from(users).where(eq(users.email, validatedData.email)).limit(1)
+    const existingEmail = await baseDb.select().from(users).where(eq(users.email, validatedData.email)).limit(1)
     if (existingEmail.length > 0) {
       throw createError({
         statusCode: 400,
@@ -61,7 +61,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // --- Check for duplicate username ---
-    const existingUsername = await db.select().from(users).where(eq(users.username, validatedData.username)).limit(1)
+    const existingUsername = await baseDb.select().from(users).where(eq(users.username, validatedData.username)).limit(1)
     if (existingUsername.length > 0) {
       throw createError({
         statusCode: 400,
@@ -73,7 +73,7 @@ export default defineEventHandler(async (event) => {
     // Hash password before storing
     const hashedPassword = await hashPassword(validatedData.password)
 
-    const insertResult = await db.insert(users).values({
+    const insertResult = await baseDb.insert(users).values({
       name: validatedData.name,
       username: validatedData.username,
       email: validatedData.email, 
