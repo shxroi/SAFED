@@ -221,3 +221,116 @@
 - Verification:
   - `npm run test` (pass)
   - `npm run build` (pass)
+
+## 2026-02-19 (Upload documentation trigger UX)
+
+- Updated upload UX in `app/components/operation/checklist/OperationActivityCard.vue`:
+  - replaced separate Camera/Gallery controls with one `Upload documentation` button below notes
+  - button now opens a single file picker (`accept="image/*"`) so mobile users can choose camera capture or gallery from OS chooser
+  - kept multi-file selection support and existing max-photo guard behavior
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass)
+
+## 2026-02-19 (Execution UX polish + typing cleanup)
+
+- Updated task documentation upload interaction in `app/components/operation/checklist/OperationActivityCard.vue`:
+  - kept a single `Upload documentation` trigger
+  - expanded into explicit mobile options (`Take Photo` and `Choose from Gallery`) before opening file input
+  - preserved existing staging behavior and max-photo constraints
+- Reduced duplicated presentation logic in `app/components/operation/OperationInfoCard.vue` by reusing formatter helpers from `useOperationFormatters`.
+- Fixed missing runtime import in `app/composables/operation/useOperationSave.ts` by importing `ref` from Vue.
+- Removed unsafe cast usage in execution header (`app/pages/operations/[id]/execute.vue`) by using typed `user?.username`.
+- Added Nuxt auth module augmentation in `app/types/auth.d.ts` for typed session user fields.
+- Updated mobile top-bar page title rendering in `app/layouts/default.vue` to show dynamic current page label.
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass)
+
+## 2026-02-19 (Responsive + accessibility pass)
+
+- Improved responsive behavior across layout and key pages (`index`, `users`, `tools`, `operations`, `observer`, operation create/execute flows):
+  - mobile-first stacking, fluid widths, and overflow-safe table wrappers
+  - action bars/buttons now adapt to small screens with full-width controls where needed
+  - operation create/execute checklists updated for mobile-friendly panel and tab layouts
+- Added accessibility upgrades aligned with WCAG 2.1 AA intent:
+  - skip links and main-content landmarks in both default and staff layouts
+  - stronger keyboard/focus treatment (global `:focus-visible` ring + keyboard activation for clickable cards/section selectors)
+  - added ARIA labels/expanded states on key controls (menus, search, filters, action triggers)
+  - improved contrast on several informational text treatments
+- Improved mobile touch ergonomics:
+  - increased control targets for buttons/inputs/select triggers/dropdown items on touch devices
+  - mobile navigation drawer in default layout replacing non-functional menu icon
+  - safer spacing for frequent actions and filter controls
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass)
+
+## 2026-02-21 (Manage operation UAT + unit tests)
+
+- Added UAT documentation for end-to-end manage-operation flow:
+  - `docs/testing/manage-operation-uat.md`
+  - includes coverage for operation creation, tools checklist, jobdesk checklist, status updates, supervisor completion, and observer monitoring.
+- Added unit tests for operation-related composables:
+  - `test/unit/checklist-builder.spec.ts`
+  - `test/unit/operation-progress.spec.ts`
+  - `test/unit/operation-access.spec.ts`
+- Verification:
+  - `corepack pnpm test` (pass)
+  - `corepack pnpm type:check` (fails: script missing)
+  - `corepack pnpm lint` (fails: script missing)
+
+## 2026-02-22 (Operation execution validation hardening)
+
+- Added client-side save validation in `app/composables/operation/useOperationSave.ts`:
+  - tools save now requires both pre and post condition for every tool
+  - activity save now requires task condition before submit
+- Updated tools checklist note behavior in `app/components/operation/checklist/ToolsChecklistPanel.vue`:
+  - pre-note remains conditional for `Not Good`
+  - post-note input now appears for both `Good` and `Not Good` post conditions
+- Updated documentation upload UI behavior in `app/components/operation/checklist/OperationActivityCard.vue`:
+  - upload controls are shown only when `documentationRequired` is true
+- Added guard in `app/pages/operations/[id]/execute.vue` to reject non-required documentation uploads on client side.
+- Hardened execution APIs:
+  - `server/api/operations/[id]/tools.put.ts` now enforces both tool conditions before update
+  - `server/api/operations/[id]/tasks/[taskId].put.ts` now requires task condition status
+  - `server/api/operations/[id]/tasks/[taskId]/documentation.post.ts` now rejects uploads when documentation is not required for the task
+- Added unit tests in `test/unit/operation-save.spec.ts` for tools/activity validation paths.
+- Verification:
+  - `corepack pnpm test` (pass)
+  - `npm run build` (pass)
+
+## 2026-02-22 (Operation flow adjustments)
+
+- Updated tools execution save flow in `app/composables/operation/useOperationSave.ts`:
+  - tools save now requires only `pre` condition
+  - `post` condition can remain null and be filled later
+- Updated tools execution API validation in `server/api/operations/[id]/tools.put.ts`:
+  - `preStatus` required
+  - `postStatus` nullable, still validated when provided
+- Updated executor badge in `app/components/operation/checklist/OperationActivityCard.vue`:
+  - replaced static `CN` with dynamic initials derived from executor name
+- Improved documentation upload visibility in `app/components/operation/checklist/OperationActivityCard.vue`:
+  - upload action explicitly shown only when documentation is required
+  - clear disabled hint shown when documentation is not required
+- Refactored manage-operation tools selector in `app/components/operation/create/ToolsEditorPanel.vue` to checkbox multi-select with search and inline quantity controls.
+- Wired create page to tool-id based multi-select handlers in `app/pages/operations/create.vue`.
+- Updated validation tests in `test/unit/operation-save.spec.ts` for pre-only tools requirement.
+- Verification:
+  - `corepack pnpm test -- operation-save.spec.ts` (pass)
+  - `npm run build` (pass)
+
+## 2026-02-22 (Documentation toggle fix + tools picker UX)
+
+- Fixed operation-create documentation toggle persistence:
+  - `app/components/operation/create/SectionEditorPanel.vue`
+  - changed switch binding from `v-model:checked` to `v-model:model-value` so `documentationRequired` is saved correctly.
+- Updated execution activity card identity badge:
+  - `app/components/operation/checklist/OperationActivityCard.vue`
+  - static `CN` replaced with initials derived from `executedByName`.
+- Updated tools picker UX for create/manage checklist:
+  - `app/components/operation/create/ToolsEditorPanel.vue`
+  - now uses searchable popover with checkbox multi-select and keeps selected tools visible with inline quantity controls.
+- Verification:
+  - `corepack pnpm test` (pass)
+  - `npm run build` (pass)

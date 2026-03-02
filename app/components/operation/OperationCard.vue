@@ -33,11 +33,16 @@ const isDateApproaching = computed(() => {
 
 <template>
   <Card
-    class="hover:shadow-lg transition-shadow cursor-pointer relative group"
+    class="relative cursor-pointer transition-shadow hover:shadow-lg"
+    role="button"
+    tabindex="0"
+    :aria-label="`Open operation ${title}`"
     @click="emit('view', props.operation)"
+    @keydown.enter.self.prevent="emit('view', props.operation)"
+    @keydown.space.self.prevent="emit('view', props.operation)"
   >
-    <CardHeader class="pb-4">
-      <div class="flex justify-between items-start mb-3 gap-3">
+    <CardHeader class="pb-3">
+      <div class="flex justify-between items-start mb-2 gap-3">
         <div class="flex items-center gap-2 min-w-0">
 
           <CardTitle class="text-lg font-semibold line-clamp-1">{{ title }}</CardTitle>
@@ -45,7 +50,12 @@ const isDateApproaching = computed(() => {
 
         <DropdownMenu v-if="props.isIM">
           <DropdownMenuTrigger as-child @click.stop>
-            <Button variant="ghost" size="icon" class="h-8 w-8 flex-shrink-0 -mr-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              class="-mr-2 h-8 w-8 flex-shrink-0"
+              aria-label="Open operation actions"
+            >
               <MoreVertical class="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -83,16 +93,16 @@ const isDateApproaching = computed(() => {
       </div>
 
       <div class="flex gap-2 flex-wrap">
-        <Badge :class="OPERATION_TYPE_BADGE_CLASS[props.operation.type]" class="text-xs font-medium px-3 py-1">
+        <Badge :class="OPERATION_TYPE_BADGE_CLASS[props.operation.type]" class="text-xs font-medium px-2 py-0.5">
           {{ props.operation.type }}
         </Badge>
-        <Badge :class="OPERATION_STATUS_BADGE_CLASS[props.operation.status]" class="text-xs font-medium px-3 py-1">
+        <Badge :class="OPERATION_STATUS_BADGE_CLASS[props.operation.status]" class="text-xs font-medium px-2 py-0.5">
           {{ props.operation.status }}
         </Badge>
       </div>
     </CardHeader>
 
-    <CardContent class="space-y-3 pt-0">
+    <CardContent class="space-y-2 pt-0">
       <div class="flex items-center gap-2 text-sm text-gray-700">
         <MapPin class="h-4 w-4 flex-shrink-0 text-gray-500" />
         <span>{{ props.operation.location }}</span>
@@ -121,7 +131,7 @@ const isDateApproaching = computed(() => {
         <span>{{ props.operation.assignedStaff || 0 }} Staff assigned</span>
       </div>
 
-      <div class="space-y-2 pt-2">
+      <div class="space-y-1.5 pt-1">
         <div class="flex justify-between items-center">
           <span class="text-sm font-semibold text-gray-900">Progress</span>
           <span class="text-sm font-bold text-gray-900">{{ props.operation.progress || 0 }}%</span>
@@ -129,7 +139,7 @@ const isDateApproaching = computed(() => {
         <Progress :model-value="props.operation.progress || 0" class="h-2" />
       </div>
 
-      <div class="pt-3 border-t text-sm">
+      <div class="pt-2 border-t text-sm">
         <span class="text-gray-600">Supervisor: </span>
         <span class="font-medium text-gray-900">{{ props.operation.supervisorName || 'Not assigned' }}</span>
       </div>

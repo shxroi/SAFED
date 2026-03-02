@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, ImagePlus, X } from "lucide-vue-next";
+import { Camera, Check, Images, ImagePlus, X } from "lucide-vue-next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,6 +40,20 @@ const emit = defineEmits<{
 const cameraInputId = computed(() => `doc-camera-${props.activity.id}`);
 const galleryInputId = computed(() => `doc-gallery-${props.activity.id}`);
 
+const showDocOptions = ref(false);
+
+const executorInitials = computed(() => {
+  const rawName = props.activity.executedByName?.trim();
+  if (!rawName) return "CN";
+
+  const nameParts = rawName.split(/\s+/).filter(Boolean);
+  if (nameParts.length === 1) {
+    return (nameParts[0] || "").slice(0, 2).toUpperCase();
+  }
+
+  return `${nameParts[0]?.[0] || ""}${nameParts[1]?.[0] || ""}`.toUpperCase();
+});
+
 const formatFileSize = (bytes: number): string => {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -51,6 +65,7 @@ const onFilesPicked = (event: Event): void => {
   const files = input.files ? Array.from(input.files) : [];
   emit("add-documentation", files);
   input.value = "";
+  showDocOptions.value = false;
 };
 </script>
 
@@ -58,7 +73,7 @@ const onFilesPicked = (event: Event): void => {
   <div class="mb-3 rounded-lg border border-gray-200 bg-white p-4">
     <div v-if="!props.editable" class="mb-3 flex items-start justify-between">
       <div class="flex items-center gap-2 text-xs text-gray-500">
-        <span class="rounded bg-gray-100 px-1 font-bold">CN</span>
+        <span class="rounded bg-gray-100 px-1 font-bold">{{ executorInitials }}</span>
         <span>{{ props.activity.executedByName || "Unknown Staff" }}</span>
       </div>
       <Badge
@@ -80,7 +95,7 @@ const onFilesPicked = (event: Event): void => {
       {{ props.activity.jobDescription }}
     </p>
 
-    <div v-if="props.editable" class="mb-4 flex items-center justify-between">
+    <div v-if="props.editable" class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <span class="text-sm font-medium text-gray-700">Condition</span>
       <div class="flex gap-2">
         <Button
@@ -89,6 +104,7 @@ const onFilesPicked = (event: Event): void => {
           :class="
             props.activity.status === 'Good' ? 'ring-2 ring-green-500' : ''
           "
+          aria-label="Mark condition good"
           @click="emit('set-status', 'Good')"
         >
           <Check class="h-4 w-4" />
@@ -99,6 +115,7 @@ const onFilesPicked = (event: Event): void => {
           :class="
             props.activity.status === 'Not Good' ? 'ring-2 ring-red-500' : ''
           "
+          aria-label="Mark condition not good"
           @click="emit('set-status', 'Not Good')"
         >
           <X class="h-4 w-4" />
@@ -113,31 +130,66 @@ const onFilesPicked = (event: Event): void => {
       Documentation Required
     </Badge>
 
-    <div v-if="props.editable" class="mb-3 space-y-3">
-      <div class="flex items-center justify-between">
+    <Textarea
+      v-if="props.editable"
+      :model-value="props.activity.notes || ''"
+      placeholder="Type activity note"
+      class="mb-4 bg-gray-50"
+      @update:model-value="emit('update-notes', String($event || ''))"
+    />
+
+    <div v-if="props.editable" class="mb-4 space-y-3">
+      <div class="flex items-center justify-end">
         <span
-          v-if="!props.activity.documentationRequired"
+          v-if="props.activity.documentationRequired"
           class="text-xs text-gray-500"
-          >Documentation optional</span
         >
-        <span class="text-xs text-gray-500"
-          >Max {{ props.maxDocsPerTask }} photos</span
+          Max {{ props.maxDocsPerTask }} photos
+        </span>
+        <span
+          v-else
+          class="text-xs text-gray-400"
         >
+          Documentation upload disabled for this task
+        </span>
       </div>
 
-      <div class="flex flex-wrap items-center gap-2">
-        <label :for="cameraInputId" class="inline-flex">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            :disabled="props.isUploading || props.remainingSlots === 0"
-            class="gap-2"
+      <template v-if="props.activity.documentationRequired">
+        <Button
+          type="button"
+          variant="outline"
+          :disabled="props.isUploading || props.remainingSlots === 0"
+          class="w-full gap-2"
+          :aria-expanded="showDocOptions"
+          aria-label="Open documentation upload options"
+          @click="showDocOptions = !showDocOptions"
+        >
+          <ImagePlus class="h-4 w-4" />
+          Upload documentation
+        </Button>
+
+        <div
+          v-if="showDocOptions"
+          class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+          role="group"
+          aria-label="Documentation upload options"
+        >
+          <label
+            :for="cameraInputId"
+            class="flex cursor-pointer items-center gap-3 border-b border-gray-100 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100"
           >
-            <ImagePlus class="h-4 w-4" />
-            Camera
-          </Button>
-        </label>
+            <Camera class="h-5 w-5 text-gray-500" />
+            Take Photo
+          </label>
+          <label
+            :for="galleryInputId"
+            class="flex cursor-pointer items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100"
+          >
+            <Images class="h-5 w-5 text-gray-500" />
+            Choose from Gallery
+          </label>
+        </div>
+
         <input
           :id="cameraInputId"
           type="file"
@@ -146,19 +198,6 @@ const onFilesPicked = (event: Event): void => {
           class="hidden"
           @change="onFilesPicked"
         />
-
-        <label :for="galleryInputId" class="inline-flex">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            :disabled="props.isUploading || props.remainingSlots === 0"
-            class="gap-2"
-          >
-            <ImagePlus class="h-4 w-4" />
-            Gallery
-          </Button>
-        </label>
         <input
           :id="galleryInputId"
           type="file"
@@ -167,16 +206,8 @@ const onFilesPicked = (event: Event): void => {
           class="hidden"
           @change="onFilesPicked"
         />
-      </div>
+      </template>
     </div>
-
-    <Textarea
-      v-if="props.editable"
-      :model-value="props.activity.notes || ''"
-      placeholder="Type activity note"
-      class="mb-4 bg-gray-50"
-      @update:model-value="emit('update-notes', String($event || ''))"
-    />
 
     <div v-if="props.visibleDocs.length > 0" class="mb-4">
       <p class="mb-2 text-xs font-medium text-gray-500">Uploaded Photos</p>
@@ -186,13 +217,14 @@ const onFilesPicked = (event: Event): void => {
           :key="doc.id"
           type="button"
           class="relative overflow-hidden rounded border border-gray-200 hover:opacity-90"
+          :aria-label="`Preview uploaded photo ${doc.fileName}`"
           @click="emit('open-preview', doc.filePath, doc.fileName)"
         >
           <NuxtImg
             :src="doc.filePath"
             alt="Documentation preview"
             width="200"
-            height="140"
+            height="150"
             format="webp"
             loading="lazy"
             class="h-24 w-full object-cover"
@@ -255,6 +287,7 @@ const onFilesPicked = (event: Event): void => {
           <button
             type="button"
             class="w-full"
+            :aria-label="`Preview pending photo ${pendingDoc.file.name}`"
             @click="
               emit(
                 'open-preview',
@@ -280,6 +313,7 @@ const onFilesPicked = (event: Event): void => {
           <button
             type="button"
             class="absolute right-1 top-1 rounded bg-white/90 px-1 text-xs text-red-600"
+            :aria-label="`Remove pending photo ${pendingDoc.file.name}`"
             @click="emit('remove-pending', pendingDoc.id)"
           >
             Remove

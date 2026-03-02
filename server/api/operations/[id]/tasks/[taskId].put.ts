@@ -88,6 +88,13 @@ export default defineEventHandler(async (event) => {
 
     const { status, notes } = body;
 
+    if (status === undefined || status === null) {
+      throw createError({
+        statusCode: 400,
+        message: "Task condition is required",
+      });
+    }
+
     if (
       status !== undefined &&
       status !== null &&

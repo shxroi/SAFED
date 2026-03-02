@@ -43,19 +43,20 @@ const onNoteUpdate = (
       :key="tool.id"
       class="rounded-lg border border-gray-200 bg-slate-50 p-4"
     >
-      <div class="mb-4 flex items-center justify-between">
+      <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h4 class="font-medium text-gray-900">{{ tool.name }}</h4>
         <span class="text-sm font-medium">QTY : {{ tool.quantity }}</span>
       </div>
 
       <div class="mb-4 space-y-3 border-b border-gray-200 pb-4">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <span class="text-sm text-gray-600">Pre condition</span>
           <div v-if="props.editable" class="flex gap-2">
             <Button
               size="sm"
               class="h-8 w-12 bg-green-300 text-green-800 hover:bg-green-400"
               :class="tool.preStatus === 'Good' ? 'ring-2 ring-green-500' : ''"
+              :aria-label="`Mark pre-condition good for ${tool.name}`"
               @click="emit('set-condition', toolIndex, 'pre', 'Good')"
             >
               <Check class="h-4 w-4" />
@@ -66,6 +67,7 @@ const onNoteUpdate = (
               :class="
                 tool.preStatus === 'Not Good' ? 'ring-2 ring-red-500' : ''
               "
+              :aria-label="`Mark pre-condition not good for ${tool.name}`"
               @click="emit('set-condition', toolIndex, 'pre', 'Not Good')"
             >
               <X class="h-4 w-4" />
@@ -102,13 +104,14 @@ const onNoteUpdate = (
       </div>
 
       <div class="space-y-3">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <span class="text-sm text-gray-600">Post condition</span>
           <div v-if="props.editable" class="flex gap-2">
             <Button
               size="sm"
               class="h-8 w-12 bg-green-300 text-green-800 hover:bg-green-400"
               :class="tool.postStatus === 'Good' ? 'ring-2 ring-green-500' : ''"
+              :aria-label="`Mark post-condition good for ${tool.name}`"
               @click="emit('set-condition', toolIndex, 'post', 'Good')"
             >
               <Check class="h-4 w-4" />
@@ -119,6 +122,7 @@ const onNoteUpdate = (
               :class="
                 tool.postStatus === 'Not Good' ? 'ring-2 ring-red-500' : ''
               "
+              :aria-label="`Mark post-condition not good for ${tool.name}`"
               @click="emit('set-condition', toolIndex, 'post', 'Not Good')"
             >
               <X class="h-4 w-4" />
@@ -138,7 +142,7 @@ const onNoteUpdate = (
         </div>
 
         <Textarea
-          v-if="tool.postStatus === 'Not Good' && props.editable"
+          v-if="props.editable && !!tool.postStatus"
           :model-value="tool.postNote || ''"
           placeholder="Type post-condition note"
           class="bg-white"
@@ -147,7 +151,7 @@ const onNoteUpdate = (
           "
         />
         <p
-          v-else-if="tool.postStatus === 'Not Good' && tool.postNote"
+          v-else-if="tool.postNote"
           class="rounded bg-gray-50 p-2 text-sm italic text-gray-600"
         >
           {{ tool.postNote }}

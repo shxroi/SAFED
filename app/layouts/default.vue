@@ -100,7 +100,7 @@ const handleLogout = async () => {
         <h1
           class="md:hidden text-lg font-bold text-slate-900 absolute translate-x-32"
         >
-          Manage user
+          {{ currentPage !== 'Dashboard' ? currentPage : 'SAFED Dashboard' }}
         </h1>
 
         <DropdownMenu>

@@ -65,7 +65,7 @@ const handleView = (operation: Operation) => {
 </script>
 
 <template>
-  <div class="p-4 md:p-8">
+  <div class="mx-auto max-w-7xl p-4 md:p-8">
     <OperationFilters
       v-model:search="searchQuery"
       v-model:type="selectedType"
@@ -77,11 +77,11 @@ const handleView = (operation: Operation) => {
 
     <OperationStats :stats="statusCounts" />
 
-    <div v-if="pending" class="text-center py-12">
+    <div v-if="pending" class="py-12 text-center" aria-live="polite">
       <p class="text-gray-500">Loading operations...</p>
     </div>
 
-    <div v-else-if="error" class="text-center py-12">
+    <div v-else-if="error" class="py-12 text-center" role="alert">
       <p class="text-red-500">Failed to load operations</p>
     </div>
 
