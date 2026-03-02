@@ -54,12 +54,18 @@ export const useOperationDetail = (operationId: Ref<number>) => {
     return fallbackMessage;
   };
 
-  const fetchOperationDetail = async (): Promise<void> => {
+  const fetchOperationDetail = async (options?: {
+    silent?: boolean;
+  }): Promise<void> => {
     if (Number.isNaN(operationId.value) || operationId.value < 1) {
       throw createError({ statusCode: 400, message: "Invalid operation ID" });
     }
 
-    loading.value = true;
+    const silent = options?.silent ?? false;
+
+    if (!silent) {
+      loading.value = true;
+    }
     error.value = null;
 
     try {
@@ -87,9 +93,14 @@ export const useOperationDetail = (operationId: Ref<number>) => {
       };
 
       tools.value = checklistResponse.tools ?? [];
+
+      const previousOpenStates = new Map(
+        sections.value.map((section) => [section.id, Boolean(section.isOpen)]),
+      );
+
       sections.value = (checklistResponse.sections ?? []).map((section) => ({
         ...section,
-        isOpen: section.isOpen ?? false,
+        isOpen: previousOpenStates.get(section.id) ?? section.isOpen ?? false,
       }));
     } catch (requestError: unknown) {
       error.value = getErrorMessage(
@@ -98,7 +109,9 @@ export const useOperationDetail = (operationId: Ref<number>) => {
       );
       throw requestError;
     } finally {
-      loading.value = false;
+      if (!silent) {
+        loading.value = false;
+      }
     }
   };
 

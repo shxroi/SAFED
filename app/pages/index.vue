@@ -81,7 +81,7 @@ const handleSubmit = async () => {
     const userRole = useAuth().user.value?.roles
 
     if (userRole === 'IM') {
-      navigateTo('/users')
+      navigateTo('/operations')
     } else if (userRole === 'STAFF') {
       navigateTo('/operations')
     } else if (userRole === 'OBSERVER') {

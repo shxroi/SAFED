@@ -15,16 +15,18 @@ const props = defineProps<{
 
 const { getStatusColor, getTypeColor } = useOperationFormatters();
 
-const title = computed(() =>
-  props.operation.vesselName || props.operation.company,
+const title = computed(
+  () => props.operation.vesselName || props.operation.company,
 );
 </script>
 
 <template>
   <Card class="border border-gray-200 shadow-sm">
-    <CardContent class="p-4">
+    <CardContent class="px-4">
       <div class="mb-4 min-w-0">
-        <h2 class="mb-2 break-words text-lg font-semibold text-gray-900">{{ title }}</h2>
+        <h2 class="mb-2 wrap-break-words text-lg font-semibold text-gray-900">
+          {{ title }}
+        </h2>
         <div class="flex items-center gap-2 flex-wrap">
           <Badge
             :class="getTypeColor(operation.type)"
@@ -46,7 +48,7 @@ const title = computed(() =>
       <div class="mb-4 space-y-2 text-sm text-gray-700">
         <div class="flex items-center gap-2">
           <MapPin class="h-4 w-4 text-gray-400 shrink-0" />
-          <span class="break-words">{{ operation.location }}</span>
+          <span class="wrap-break-words">{{ operation.location }}</span>
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <Calendar class="h-4 w-4 text-gray-400 shrink-0" />
@@ -61,7 +63,9 @@ const title = computed(() =>
         </div>
         <div class="flex items-center gap-2">
           <Users class="h-4 w-4 text-gray-400 shrink-0" />
-          <span>{{ operation.staffNames?.join(", ") || "No staff assigned" }}</span>
+          <span>{{
+            operation.staffNames?.join(", ") || "No staff assigned"
+          }}</span>
         </div>
       </div>
 
@@ -76,7 +80,9 @@ const title = computed(() =>
       <div class="pt-3 border-t border-gray-100">
         <p class="text-sm text-gray-600">
           Supervisor:
-          <span class="font-medium text-gray-900">{{ operation.supervisorName }}</span>
+          <span class="font-medium text-gray-900">{{
+            operation.supervisorName
+          }}</span>
         </p>
       </div>
     </CardContent>

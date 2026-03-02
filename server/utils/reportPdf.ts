@@ -128,7 +128,7 @@ export const buildFieldReportPdf = async (
   let logoImage: Awaited<ReturnType<typeof doc.embedPng>> | null = null;
   try {
     const logoBuffer = await readFile(
-      join(process.cwd(), "app", "assets", "images", "safebox-logo.png"),
+      join(process.cwd(), "public/images/safebox-logo.png"),
     );
     logoImage = await doc.embedPng(logoBuffer);
   } catch {
@@ -308,22 +308,6 @@ export const buildFieldReportPdf = async (
         width: logoWidth,
         height: logoHeight,
       });
-    } else {
-      drawTextLine("SAFEBOX.", {
-        x: PAGE_MARGIN,
-        y: height - 55,
-        size: 28,
-        bold: true,
-        serif: false,
-        color: rgb(0.07, 0.12, 0.32),
-      });
-      drawTextLine("Engine Monitoring System", {
-        x: PAGE_MARGIN,
-        y: height - 70,
-        size: 9,
-        serif: false,
-        color: rgb(0.2, 0.2, 0.2),
-      });
     }
   };
 
@@ -436,7 +420,7 @@ export const buildFieldReportPdf = async (
 
   if (input.crewSignRequired) {
     // Two-column: Crew (left) + Vendor (right)
-    drawTextLine(input.crewName || "Perwakilan Kapal", {
+    drawTextLine("Nahkoda/Chief/KKM ", {
       x: leftSignX,
       size: 12,
     });
@@ -457,14 +441,6 @@ export const buildFieldReportPdf = async (
       size: 12,
     });
     cursorY -= 16;
-
-    drawTextLine("Nahkoda / Perwakilan Kapal", {
-      x: leftSignX,
-      size: 11,
-      italic: true,
-      color: rgb(0.3, 0.3, 0.3),
-    });
-    cursorY -= 20;
   } else {
     // Single column left-aligned: Vendor only
     drawTextLine("Vendor", {

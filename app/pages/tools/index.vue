@@ -1,211 +1,250 @@
 <script lang="ts" setup>
-import { ref, computed, watch, onScopeDispose } from 'vue'
-import { toast } from 'vue-sonner'
-import { Search, Plus, MoreVertical, Pencil, Trash2 } from 'lucide-vue-next'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import DeleteConfirmDialog from '@/components/DeleteConfimDialog.vue'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table'
-import { Pagination, PaginationContent, PaginationItem, PaginationEllipsis } from '@/components/ui/pagination'
-import { Label } from '@/components/ui/label'
-import type { Tool, ToolForm } from '../../../shared/types/tool'
-import { z } from 'zod'
+import { ref, computed, watch, onScopeDispose } from "vue";
+import { toast } from "vue-sonner";
+import { Search, Plus, MoreVertical, Pencil, Trash2 } from "lucide-vue-next";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import DeleteConfirmDialog from "@/components/DeleteConfimDialog.vue";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableCaption,
+} from "@/components/ui/table";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
+import { Label } from "@/components/ui/label";
+import type { Tool, ToolForm } from "../../../shared/types/tool";
+import { z } from "zod";
 
-const route = useRoute()
-const router = useRouter()
+const route = useRoute();
+const router = useRouter();
 
-const itemsPerPage = 10
+const itemsPerPage = 10;
 
-const searchQuery = ref((route.query.search as string || '') ?? '')
-const currentPage = ref(Number(route.query.page) || 1)
+const searchQuery = ref(((route.query.search as string) || "") ?? "");
+const currentPage = ref(Number(route.query.page) || 1);
 
-const isDialogOpen = ref(false)
-const isEditing = ref(false)
-const currentToolId = ref<number | null>(null)
-const toolForm = ref<ToolForm>({ name: ''})
+const isDialogOpen = ref(false);
+const isEditing = ref(false);
+const currentToolId = ref<number | null>(null);
+const toolForm = ref<ToolForm>({ name: "" });
 
 // Form validation
-const fieldErrors = ref<Record<string, string>>({})
+const fieldErrors = ref<Record<string, string>>({});
 
 const toolFormSchema = z.object({
-  name: z.string()
-    .min(1, 'Tool name is required')
-    .max(50, 'Tool name must be at most 50 characters long')
-    .trim()
-})
+  name: z
+    .string()
+    .min(1, "Tool name is required")
+    .max(50, "Tool name must be at most 50 characters long")
+    .trim(),
+});
 
-watch(() => route.query, (newQuery) => {
-  const newSearch = (newQuery.search as string) || ''
-  if (searchQuery.value !== newSearch) {
-    searchQuery.value = newSearch
-  }
-  
-  const newPage = Number(newQuery.page) || 1
-  if (currentPage.value !== newPage) {
-    currentPage.value = newPage
-  }
-}, { immediate: true })
+watch(
+  () => route.query,
+  (newQuery) => {
+    const newSearch = (newQuery.search as string) || "";
+    if (searchQuery.value !== newSearch) {
+      searchQuery.value = newSearch;
+    }
+
+    const newPage = Number(newQuery.page) || 1;
+    if (currentPage.value !== newPage) {
+      currentPage.value = newPage;
+    }
+  },
+  { immediate: true },
+);
 
 const updateURL = () => {
   const newQuery: Record<string, string | undefined> = {
     search: searchQuery.value || undefined,
     page: currentPage.value > 1 ? String(currentPage.value) : undefined,
-  }
+  };
 
-  const currentQuery = route.query
-  const hasChanged = 
-    newQuery.search !== (currentQuery.search as string || undefined) ||
-    newQuery.page !== (currentQuery.page as string || undefined)
+  const currentQuery = route.query;
+  const hasChanged =
+    newQuery.search !== ((currentQuery.search as string) || undefined) ||
+    newQuery.page !== ((currentQuery.page as string) || undefined);
 
   if (hasChanged) {
-    router.push({ query: { ...currentQuery, ...newQuery } })
+    router.push({ query: { ...currentQuery, ...newQuery } });
   }
-}
+};
 
-const { data, pending, error, refresh } = await useFetch<{ tools: Tool[], total: number }>('/api/tools', {
+const { data, pending, error, refresh } = await useFetch<{
+  tools: Tool[];
+  total: number;
+}>("/api/tools", {
   query: computed(() => ({
     page: route.query.page || 1,
     limit: itemsPerPage,
     search: route.query.search || undefined,
   })),
-})
+});
 
-const tools = computed(() => data.value?.tools || [])
-const totalTools = computed(() => data.value?.total || 0)
+const tools = computed(() => data.value?.tools || []);
+const totalTools = computed(() => data.value?.total || 0);
 
-let searchTimeout: ReturnType<typeof setTimeout> | null = null
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 onScopeDispose(() => {
   if (searchTimeout) {
-    clearTimeout(searchTimeout)
-    searchTimeout = null
+    clearTimeout(searchTimeout);
+    searchTimeout = null;
   }
-})
+});
 
 watch(searchQuery, () => {
-  if (searchTimeout) clearTimeout(searchTimeout)
+  if (searchTimeout) clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => {
-    currentPage.value = 1
-    updateURL()
-  }, 300)
-})
+    currentPage.value = 1;
+    updateURL();
+  }, 300);
+});
 
 watch(currentPage, (newPage, oldPage) => {
   if (newPage !== oldPage) {
-    updateURL()
+    updateURL();
   }
-})
+});
 
 const openDialog = (tool?: Tool) => {
   // Reset validation errors
-  fieldErrors.value = {}
-  
+  fieldErrors.value = {};
+
   if (tool) {
-    isEditing.value = true
-    currentToolId.value = tool.id
-    toolForm.value = { name: tool.name }
+    isEditing.value = true;
+    currentToolId.value = tool.id;
+    toolForm.value = { name: tool.name };
   } else {
-    isEditing.value = false
-    currentToolId.value = null
-    toolForm.value = { name: '' }
+    isEditing.value = false;
+    currentToolId.value = null;
+    toolForm.value = { name: "" };
   }
-  isDialogOpen.value = true
-}
+  isDialogOpen.value = true;
+};
 
 const handleSubmit = async () => {
   // Reset errors
-  fieldErrors.value = {}
-  
+  fieldErrors.value = {};
+
   // Client-side validation
-  const validation = toolFormSchema.safeParse(toolForm.value)
-  
+  const validation = toolFormSchema.safeParse(toolForm.value);
+
   if (!validation.success) {
-    const errors = validation.error.flatten().fieldErrors
+    const errors = validation.error.flatten().fieldErrors;
     fieldErrors.value = {
-      name: errors.name?.[0] || ''
-    }
-    toast.error('Please fix the validation errors')
-    return
+      name: errors.name?.[0] || "",
+    };
+    toast.error("Please fix the validation errors");
+    return;
   }
 
   try {
     if (isEditing.value && currentToolId.value) {
       await $fetch(`/api/tools/${currentToolId.value}`, {
-        method: 'PUT',
+        method: "PUT",
         body: validation.data,
-      })
-      toast.success('Tool updated successfully')
+      });
+      toast.success("Tool updated successfully");
     } else {
-      await $fetch('/api/tools', {
-        method: 'POST',
+      await $fetch("/api/tools", {
+        method: "POST",
         body: validation.data,
-      })
-      toast.success('Tool created successfully')
+      });
+      toast.success("Tool created successfully");
     }
-    await refresh()
-    isDialogOpen.value = false
+    await refresh();
+    isDialogOpen.value = false;
   } catch (error: any) {
     // Handle server-side validation errors
     if (error.data?.data) {
-      fieldErrors.value = error.data.data
-      toast.error(error.data.message || 'Validation failed')
+      fieldErrors.value = error.data.data;
+      toast.error(error.data.message || "Validation failed");
     } else {
-      toast.error(error.data?.message || 'Failed to save tool')
+      toast.error(error.data?.message || "Failed to save tool");
     }
   }
-}
+};
 
-const isDeleteDialogOpen = ref(false)
-const toolToDelete = ref<number | null>(null)
+const isDeleteDialogOpen = ref(false);
+const toolToDelete = ref<number | null>(null);
 
 const openDeleteDialog = (id: number) => {
-  toolToDelete.value = id
-  isDeleteDialogOpen.value = true
-}
+  toolToDelete.value = id;
+  isDeleteDialogOpen.value = true;
+};
 
 const confirmDelete = async () => {
-  if (!toolToDelete.value) return
-  
+  if (!toolToDelete.value) return;
+
   try {
     await $fetch(`/api/tools/${toolToDelete.value}`, {
-      method: 'DELETE',
-    })
-    toast.success('Tool deleted successfully')
-    await refresh()
+      method: "DELETE",
+    });
+    toast.success("Tool deleted successfully");
+    await refresh();
   } catch (error: any) {
-    toast.error(error?.data?.message || 'Failed to delete tool')
+    toast.error(error?.data?.message || "Failed to delete tool");
   } finally {
-    isDeleteDialogOpen.value = false
-    toolToDelete.value = null
+    isDeleteDialogOpen.value = false;
+    toolToDelete.value = null;
   }
-}
-
+};
 </script>
 
 <template>
-  <div class="p-4 md:p-8">
+  <div class="p-4 sm:p-6 lg:p-8">
     <!-- Header Section -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-      <div class="hidden md:flex justify-between items-center mb-10">
-        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Manage Tools</h1>
-      </div>
-      <div class="flex items-center gap-3">
+    <div class="mb-8 flex min-w-0 items-center gap-3">
+      <h1
+        class="hidden shrink-0 text-xl font-bold tracking-tight text-slate-900 lg:block lg:text-2xl"
+      >
+        Manage Tools
+      </h1>
+
+      <div class="flex min-w-0 w-full flex-1 items-center gap-2 lg:ml-auto lg:max-w-[460px]">
         <!-- Search Input -->
-        <div class="relative w-58">
-          <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input 
+        <div class="relative min-w-0 flex-1">
+          <Search
+            class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
+          />
+          <Input
             v-model="searchQuery"
-            placeholder="Search" 
-            class="pl-10 rounded-md bg-white border-gray-300 focus-visible:ring-gray-400"
+            placeholder="Search"
+            aria-label="Search tools"
+            name="search"
+            autocomplete="off"
+            class="h-10 w-full rounded-md border-gray-300 bg-white pl-10 focus-visible:ring-gray-400"
           />
         </div>
-        
+
         <!-- New Button -->
-        <Button 
-          @click="openDialog()" 
-          class="rounded-md px-6 hover:bg-gray-500 text-white font-medium"
+        <Button
+          @click="openDialog()"
+          class="h-10 shrink-0 rounded-md px-4 font-medium text-white hover:bg-gray-500 lg:px-6"
         >
           + New
         </Button>
@@ -231,7 +270,9 @@ const confirmDelete = async () => {
             </TableCell>
           </TableRow>
           <TableRow v-for="(tool, index) in tools" :key="tool.id">
-            <TableCell>{{ (currentPage - 1) * itemsPerPage + index + 1 }}</TableCell>
+            <TableCell>{{
+              (currentPage - 1) * itemsPerPage + index + 1
+            }}</TableCell>
             <TableCell>{{ tool.name }}</TableCell>
             <TableCell class="text-right">
               <DropdownMenu>
@@ -241,11 +282,17 @@ const confirmDelete = async () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" class="w-48">
-                  <DropdownMenuItem @click="openDialog(tool)" class="cursor-pointer">
+                  <DropdownMenuItem
+                    @click="openDialog(tool)"
+                    class="cursor-pointer"
+                  >
                     <Pencil class="w-4 h-4 mr-2" />
                     Edit
                   </DropdownMenuItem>
-                  <DropdownMenuItem @click="openDeleteDialog(tool.id)" class="text-red-600 cursor-pointer">
+                  <DropdownMenuItem
+                    @click="openDeleteDialog(tool.id)"
+                    class="text-red-600 cursor-pointer"
+                  >
                     <Trash2 class="w-4 h-4 mr-2" />
                     Delete
                   </DropdownMenuItem>
@@ -271,10 +318,21 @@ const confirmDelete = async () => {
         show-edges
         as-child
       >
-        <PaginationContent v-slot="{ items }" class="flex items-center justify-center mt-4 space-x-2">
+        <PaginationContent
+          v-slot="{ items }"
+          class="flex items-center justify-center mt-4 space-x-2"
+        >
           <template v-for="(item, index) in items">
-            <PaginationItem v-if="item.type === 'page'" :key="index" :value="item.value" as-child>
-              <Button class="w-10 h-10 p-0" :variant="item.value === currentPage ? 'default' : 'ghost'">
+            <PaginationItem
+              v-if="item.type === 'page'"
+              :key="index"
+              :value="item.value"
+              as-child
+            >
+              <Button
+                class="w-10 h-10 p-0"
+                :variant="item.value === currentPage ? 'default' : 'ghost'"
+              >
                 {{ item.value }}
               </Button>
             </PaginationItem>
@@ -288,18 +346,22 @@ const confirmDelete = async () => {
     <Dialog v-model:open="isDialogOpen">
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{{ isEditing ? 'Edit Tool' : 'Add New Tool' }}</DialogTitle>
+          <DialogTitle>{{
+            isEditing ? "Edit Tool" : "Add New Tool"
+          }}</DialogTitle>
         </DialogHeader>
         <div class="space-y-4 py-4">
           <div>
             <Label for="tool-name" class="block text-sm font-medium mb-2">
               Tool Name <span class="text-red-500">*</span>
             </Label>
-            <Input 
+            <Input
               id="tool-name"
-              v-model="toolForm.name" 
+              v-model="toolForm.name"
               placeholder="Enter tool name"
-              :class="{ 'border-red-500 focus-visible:ring-red-500': fieldErrors.name }"
+              :class="{
+                'border-red-500 focus-visible:ring-red-500': fieldErrors.name,
+              }"
               maxlength="50"
             />
             <p v-if="fieldErrors.name" class="text-red-500 text-sm mt-1">
@@ -311,8 +373,12 @@ const confirmDelete = async () => {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" @click="isDialogOpen = false">Cancel</Button>
-          <Button @click="handleSubmit">{{ isEditing ? 'Update' : 'Create' }}</Button>
+          <Button variant="outline" @click="isDialogOpen = false"
+            >Cancel</Button
+          >
+          <Button @click="handleSubmit">{{
+            isEditing ? "Update" : "Create"
+          }}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

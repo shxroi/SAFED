@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Users, ToolCase, LogOut, Menu, Ship } from "lucide-vue-next";
+import { UserPen, Wrench, LogOut, Menu, Settings2 } from "lucide-vue-next";
 import safedLogo from "/images/safedlogo.webp";
 import Avatar from "/images/avatar.png";
 
@@ -8,24 +8,46 @@ const { user: authUser, logout } = useAuth();
 const mobileNavOpen = ref(false);
 
 const currentPage = computed(() => {
+  if (route.path === "/users") return "Manage Users";
+  if (route.path === "/tools") return "Manage Tools";
+  if (route.path === "/operations") return "Operations List";
+  if (route.path === "/operations/create") return "Create Operation";
+  if (route.path.match(/\/operations\/\d+\/report/)) return "Operation Report";
+  if (route.path.match(/\/operations\/\d+\/execute/))
+    return "Execute Operation";
+  if (route.path.match(/\/operations\/\d+/)) return "Operation Detail";
+
   const name = route.name?.toString() || "Dashboard";
   return name.charAt(0).toUpperCase() + name.slice(1);
+});
+
+const mobilePageTitle = computed(() => {
+  if (route.path === "/users") return "Manage Users";
+  if (route.path === "/tools") return "Manage Tools";
+  if (route.path === "/operations") return "Operations List";
+  if (route.path === "/operations/create") return "Create Operation";
+  if (route.path.match(/\/operations\/\d+\/report/)) return "Operation Report";
+  if (route.path.match(/\/operations\/\d+\/execute/))
+    return "Execute Operation";
+  if (route.path.match(/\/operations\/\d+/)) return "Operation Detail";
+
+  return currentPage.value !== "Dashboard" ? currentPage.value : "SAFED";
 });
 
 const navigationItems = computed(() => {
   if (authUser.value?.roles === "IM") {
     return [
-      { to: "/users", label: "Users Management", icon: Users },
-      { to: "/tools", label: "Tools Management", icon: ToolCase },
-      { to: "/operations", label: "Manage Operations", icon: Ship },
+      { to: "/operations", label: "Manage Operations", icon: Settings2 },
+      { to: "/users", label: "Users Management", icon: UserPen },
+      { to: "/tools", label: "Tools Management", icon: Wrench },
     ];
   }
 
   if (authUser.value?.roles === "OBSERVER") {
-    return [{ to: "/observer", label: "Operations", icon: Ship }];
+    return [{ to: "/observer", label: "Operations", icon: Settings2 }];
   }
 
-  return [{ to: "/operations", label: "Manage Operations", icon: Ship }];
+  return [{ to: "/operations", label: "Operations", icon: Settings2 }];
 });
 
 const closeMobileNav = (): void => {
@@ -80,10 +102,10 @@ watch(
     </aside>
 
     <!-- Main Content Area -->
-    <div class="flex-1 flex flex-col">
+    <div class="flex min-w-0 flex-1 flex-col">
       <!-- Top Header -->
       <header
-        class="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-4 md:px-8 sticky top-0 z-10 w-full"
+        class="sticky top-0 z-99 flex h-16 w-full items-center justify-between border-b border-slate-100 bg-white px-4 md:px-8"
       >
         <div class="flex items-center gap-3">
           <button
@@ -96,14 +118,45 @@ watch(
           </button>
           <!-- Desktop Breadcrumb -->
           <div class="hidden md:block text-sm text-slate-400">
-            Pages /
-            <span class="text-slate-900 font-medium">{{ currentPage }}</span>
+            <template v-if="route.path.match(/\/operations\/\d+\/report/)">
+              <NuxtLink to="/operations" class="hover:text-slate-600"
+                >Operations</NuxtLink
+              >
+              / <span class="text-slate-900 font-medium">Operation Report</span>
+            </template>
+            <template
+              v-else-if="route.path.match(/\/operations\/\d+\/execute/)"
+            >
+              <NuxtLink to="/operations" class="hover:text-slate-600"
+                >Operations</NuxtLink
+              >
+              /
+              <span class="text-slate-900 font-medium">Execute Operation</span>
+            </template>
+            <template v-else-if="route.path.match(/\/operations\/\d+/)">
+              <NuxtLink to="/operations" class="hover:text-slate-600"
+                >Operations</NuxtLink
+              >
+              / <span class="text-slate-900 font-medium">Operation Detail</span>
+            </template>
+            <template v-else-if="route.path === '/operations/create'">
+              <NuxtLink to="/operations" class="hover:text-slate-600"
+                >Operations</NuxtLink
+              >
+              / <span class="text-slate-900 font-medium">Create Operation</span>
+            </template>
+            <template v-else>
+              Pages /
+              <span class="text-slate-900 font-medium">{{ currentPage }}</span>
+            </template>
           </div>
-          <!-- Mobile Page Title -->
-          <h1 class="md:hidden text-base font-semibold text-slate-900">
-            {{ currentPage !== "Dashboard" ? currentPage : "SAFED" }}
-          </h1>
         </div>
+
+        <h1
+          class="pointer-events-none absolute left-1/2 -translate-x-1/2 text-base font-semibold text-slate-900 md:hidden"
+        >
+          {{ mobilePageTitle }}
+        </h1>
 
         <DropdownMenu>
           <DropdownMenuTrigger as-child>
@@ -151,7 +204,7 @@ watch(
       >
         <div
           v-if="mobileNavOpen"
-          class="fixed inset-0 z-40 md:hidden"
+          class="fixed inset-0 z-[120] md:hidden"
           role="dialog"
           aria-modal="true"
         >
@@ -163,7 +216,7 @@ watch(
           />
 
           <aside
-            class="relative z-10 h-full w-72 max-w-[82vw] border-r border-slate-200 bg-white"
+            class="relative z-[121] h-full w-72 max-w-[82vw] border-r border-slate-200 bg-white"
           >
             <div class="border-b border-slate-100 p-6">
               <NuxtImg
@@ -194,7 +247,7 @@ watch(
       </Transition>
 
       <!-- Page Content -->
-      <main>
+      <main class="overflow-x-hidden">
         <slot />
       </main>
     </div>

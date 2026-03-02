@@ -1,5 +1,55 @@
 # OpenCode Change Log
 
+## 2026-03-02 (Mobile sidebar overlay stacking fix)
+
+- Fixed mobile sidebar layering in `app/layouts/default.vue` so navigation drawer always appears in front of page content and sticky header.
+- Increased mobile nav overlay stacking order:
+  - overlay container `z-[120]`
+  - drawer panel `z-[121]`
+- Result: mobile sidebar now covers/dims everything consistently when opened.
+
+## 2026-03-01 (Execute header card visual alignment)
+
+- Refined read-only execute header card visuals in `app/pages/operations/[id]/execute.vue` to match compact reference layout:
+  - restored dedicated `Report` card container with compact title row and action layout.
+  - tightened typography, spacing, and icon/button sizing for the report action panel.
+  - compacted operation summary card metadata/progress spacing and progress bar thickness to align with checklist card style.
+- Kept previous access behavior intact:
+  - supervisor can still open `Field Report` before publish.
+  - IM/Observer remain read-only with file-based review/download once report is generated.
+
+## 2026-03-01 (Supervisor report entry UI adjustment)
+
+- Updated read-only execute report card behavior in `app/pages/operations/[id]/execute.vue`:
+  - supervisor now sees `Field Report` action (instead of only `Review`) when report PDF is not generated yet.
+  - `Field Report` routes supervisor to `/operations/{id}/report` so generation flow remains accessible.
+  - IM/Observer keep read-only `Review`/`Download` behavior tied to generated PDF availability.
+
+## 2026-03-01 (Field report publish flow lock)
+
+- Enforced one-time field report publishing flow:
+  - `server/api/operations/[id]/report.post.ts` now rejects regenerate attempts with `409` once a report already exists.
+  - `server/api/operations/[id]/report.get.ts` now exposes `canGenerate` only when operation is complete, user is supervisor, and no report has been generated yet.
+  - `server/api/operations/[id]/report/preview.post.ts` now rejects preview after report has been generated.
+- Updated report page behavior in `app/pages/operations/[id]/report.vue`:
+  - pre-publish supervisor state keeps editable form + preview + generate.
+  - post-publish state is read-only with generated file viewer and `Review` / `Download` actions.
+  - non-supervisor/non-generator state without published file now shows report waiting message.
+- Updated read-only execute card actions in `app/pages/operations/[id]/execute.vue`:
+  - `Review` opens generated report file directly.
+  - `Download` downloads generated report file.
+  - both remain unavailable until report file exists.
+
+## 2026-03-01 (Read-only execute header layout sync)
+
+- Updated read-only operation execute header layout in `app/pages/operations/[id]/execute.vue` to match checklist grid behavior on web:
+  - switched top container to `lg:grid-cols-12` with the same gap pattern as checklist section.
+  - left report panel now uses `lg:col-span-3` and summary card uses `lg:col-span-9`.
+- Replaced report action labels in read-only view:
+  - `Field Report` -> `Review`
+  - `PDF` -> `Download`
+- Added compact report panel treatment (report row + action buttons) while preserving existing `openReportPage` and `openReportPdf` behavior.
+
 ## 2026-02-17
 
 - Created and switched to branch `bug-demoai`.
@@ -196,7 +246,7 @@
 - Fixed API error propagation in:
   - `server/api/operations/[id]/checklist.get.ts`
   - `server/api/operations/list.get.ts`
-  by rethrowing known H3 errors before wrapping unknown exceptions.
+    by rethrowing known H3 errors before wrapping unknown exceptions.
 - Added operation lifecycle guards (`Active` required) to execution mutation APIs:
   - `server/api/operations/[id]/tools.put.ts`
   - `server/api/operations/[id]/tasks/[taskId].put.ts`
@@ -597,3 +647,299 @@
 - Verification:
   - `npm run test` (pass)
   - `npm run build` (pass; existing duplicate auto-import/sourcemap warnings remain)
+
+## 2026-02-26 (Report preview iframe + generate download)
+
+- Added new preview-only API endpoint `server/api/operations/[id]/report/preview.post.ts`:
+  - validates same report payload contract as generate endpoint
+  - enforces complete-operation + supervisor authorization
+  - validates selected documentation IDs against operation scope
+  - generates PDF bytes without writing DB/file records
+  - returns inline `application/pdf` response for client iframe preview
+- Updated report page flow in `app/pages/operations/[id]/report.vue`:
+  - `Open Preview` now generates PDF from current form state and shows it in an in-page iframe dialog (no new browser tab)
+  - preview uses Blob URL lifecycle with cleanup (`URL.revokeObjectURL`) on close/unmount
+  - `Generate Report` now persists report as before and then triggers direct PDF download from returned `pdfPath`
+  - consolidated payload validation/building in a shared client helper for preview + generate paths
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass; existing duplicate auto-import/sourcemap warnings remain)
+
+## 2026-02-26 (Checklist activity card compact design alignment)
+
+- Updated checklist activity card styling to match compact reference design in `app/components/operation/checklist/OperationActivityCard.vue`:
+  - editable activity now uses standalone card shell (`rounded + border + white bg`)
+  - reduced description, condition, textarea, upload, and save control sizing for tighter mobile visual density
+  - fixed condition action button width classes to valid Tailwind utility (`w-24`)
+  - restored note placeholder to `Type tool note here`
+- Updated section/module activity layout in `app/components/operation/checklist/OperationSectionsChecklist.vue`:
+  - module container simplified to compact slate block
+  - removed integrated shared activity panel/divider pattern
+  - activities now render as individual stacked cards to match screenshot structure
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass; existing duplicate auto-import/sourcemap warnings remain)
+
+## 2026-02-26 (Checklist duplicate title + condition selection fix)
+
+- Fixed duplicate section/module title rendering in `app/components/operation/checklist/OperationSectionsChecklist.vue`:
+  - removed inner module title display so opened dropdown shows activities directly under the section header.
+- Fixed condition button interaction regression in `app/components/operation/checklist/OperationSectionsChecklist.vue`:
+  - restored activity loop index (`activityIndex`) in `v-for`
+  - ensures `set-status` emits valid section/module/activity indices again.
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass; existing duplicate auto-import/sourcemap warnings remain)
+
+## 2026-02-26 (Remove gap between section title and activities)
+
+- Tightened section collapse spacing in `app/components/operation/checklist/OperationSectionsChecklist.vue`:
+  - removed bottom margin on section trigger button
+  - removed extra spacing on collapsible content container
+  - removed top padding inside module wrapper
+- Result: activity list now starts immediately under the opened section header.
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass; existing duplicate auto-import/sourcemap warnings remain)
+
+## 2026-02-26 (Section header + activities unified container)
+
+- Refactored section collapsible layout in `app/components/operation/checklist/OperationSectionsChecklist.vue` so section title and activity list are rendered inside one continuous container (single bordered block).
+- Updated structure:
+  - section root now owns rounded border/background (`Collapsible` class)
+  - trigger button is borderless/flat inside same container
+  - content uses a top divider (`border-t`) instead of separate outer box
+- This removes visual separation and keeps header + activities as one integrated block.
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass; existing duplicate auto-import/sourcemap warnings remain)
+
+## 2026-02-26 (Preserve checklist open state on save)
+
+- Improved execute-page save UX so saving activity/tools does not collapse opened sections or trigger full-page loading spinner.
+- Updated `app/composables/operation/useOperationDetail.ts`:
+  - added `fetchOperationDetail({ silent?: boolean })`
+  - `silent: true` skips toggling global `loading` state
+  - preserves section open/closed state by section ID across checklist refetch
+- Updated `app/composables/operation/useOperationSave.ts`:
+  - tools save and activity save now call `fetchOperationDetail({ silent: true })`
+  - keeps current checklist context open while still syncing latest server data after save
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass; existing duplicate auto-import/sourcemap warnings remain)
+
+## 2026-02-26 (Tools execution card background refinement)
+
+- Updated tools execution card styling in `app/components/operation/checklist/ToolsChecklistPanel.vue`:
+  - tool card background switched to white (`bg-white`)
+  - tool name/quantity header row now uses slate background (`bg-slate-100`) with rounded inset styling
+- Keeps existing condition and notes behavior unchanged.
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass; existing duplicate auto-import/sourcemap warnings remain)
+
+## 2026-02-26 (Tools execution controls + note area polish)
+
+- Refined tools execution condition blocks in `app/components/operation/checklist/ToolsChecklistPanel.vue`:
+  - wrapped pre/post controls in compact slate sub-panels (`rounded + border + bg-slate-50`)
+  - updated condition labels to uppercase micro-label style for clearer hierarchy
+  - normalized condition button sizing (`w-14`, rounded) for consistent visual rhythm
+- Refined tool note fields in `app/components/operation/checklist/ToolsChecklistPanel.vue`:
+  - increased textarea minimum height for easier mobile entry
+  - aligned border/background treatment with white input surface
+  - updated placeholders to `Type pre-condition note…` / `Type post-condition note…`
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass; existing duplicate auto-import/sourcemap warnings remain)
+
+## 2026-02-26 (Draggable attachment ordering in field report)
+
+- Added drag-and-drop ordering for selected attachment cards in `app/pages/operations/[id]/report.vue`.
+- Users can now drag selected documentation cards inside each attachment note to set output order before preview/generate.
+- Added a small helper hint (`Drag cards to set attachment order.`) shown when multiple images are selected and report is editable.
+- Attachment order now follows the reordered `documentationIds` list sent in report preview/generate payload.
+
+## 2026-02-26 (Attachment card reorder correction)
+
+- Updated `app/pages/operations/[id]/report.vue` drag-and-drop behavior to reorder entire attachment note cards (note + selected images), not individual image cards.
+- Restored selected-image grid to static display within each attachment card; remove action remains unchanged.
+- Added per-card drag hint (`Drag this attachment card to reorder.`) and visual drop-target highlight.
+- Report payload note ordering now follows the reordered attachment card sequence.
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass; existing duplicate auto-import/sourcemap warnings remain)
+
+## 2026-02-26 (Users table UX and responsive fixes)
+
+- Refactored `app/pages/users/index.vue` table rendering and responsive layout.
+- Moved loading/error/empty states into table rows (`TableBody` + `TableRow` + `TableCell`), removing out-of-table status blocks.
+- Added table skeleton rows that mimic user list columns while loading.
+- Updated role labels in UI to title case for non-IM roles (`Observer`, `Staff`) while keeping backend filter values unchanged.
+- Fixed filter checkbox behavior by removing duplicate click handlers and relying on `@update:checked` only.
+- Added mobile-first responsive controls (search/filter/new button stack/wrap) and table swipe behavior on small screens (`overflow-x-auto` + wide minimum table width).
+- Added visible table border container styling (`rounded + border + bg-white`).
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass; existing duplicate auto-import/sourcemap warnings remain)
+
+## 2026-02-26 (Users mobile header + table frame/swipe refinement)
+
+- Refined `app/pages/users/index.vue` mobile layout to better match provided reference:
+  - header controls switched to one responsive row (`Search`, `Sort by`, `+ new`)
+  - updated title to `Manage Users`
+  - moved active-filter badge fully inside filter button to avoid viewport overflow
+- Wrapped user table in a framed container (`rounded-xl + border + bg-white`) and constrained overflow handling:
+  - added dedicated horizontal swipe area for table content (`overflow-x-auto`, `overscroll-behavior-x: contain`, `touch-action: pan-x`)
+  - kept wide table (`min-w-[960px]`) so columns remain readable on mobile
+  - added page-level horizontal overflow clipping to prevent whole-page sideways scroll
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass; existing duplicate auto-import/sourcemap warnings remain)
+
+## 2026-02-26 (Users page rebuilt as responsive table demo)
+
+- Replaced `app/pages/users/index.vue` with a Nuxt + Tailwind responsive table implementation using local dummy `users` data in `<script setup>`.
+- Implemented requested structure:
+  - responsive main layout with stable header (`Manage Users` + `+ New`) and separate footer pagination
+  - table wrapped in dedicated horizontal scroll container (`overflow-x-auto`) with wide table layout (`min-w-[800px]`)
+  - sticky table header (`thead.sticky.top-0`) for vertical scroll visibility
+  - thin row borders and clean neutral color palette
+- Added simple client-side search and pagination with `v-for` row rendering.
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass; existing duplicate auto-import/sourcemap warnings remain)
+
+## 2026-02-26 (Revert users demo rewrite)
+
+- Reverted `app/pages/users/index.vue` from dummy-data demo back to the API-backed users management implementation requested previously.
+- Restored search/filter/pagination integration with `/api/users`, user actions, and dialog flows.
+
+## 2026-02-26 (Users swipe scope + small-screen header stretch)
+
+- Updated `app/pages/users/index.vue` header controls to fully adapt on small screens:
+  - controls now stack to single-column on narrow widths and switch to row layout from `sm` breakpoint
+  - filter and new buttons are full-width on mobile and auto-width on larger screens
+- Kept table swipe confined to the table frame by preserving the dedicated scroll container (`overflow-x-auto`) and preventing page-level horizontal overflow in content shell.
+- Updated `app/layouts/default.vue` main content wrapper with `overflow-x-hidden` so horizontal gestures do not shift the whole page while still allowing inner table scroll areas.
+
+## 2026-02-26 (Users mobile overflow hardening follow-up)
+
+- Further hardened users page mobile behavior in `app/pages/users/index.vue`:
+  - table scroll wrapper now explicitly uses `w-full max-w-full` to keep scroll scope locked to table container width
+  - reduced table minimum width from `960px` to `900px` to lower swipe distance while preserving readability
+  - pagination container now wraps with `flex-wrap` + `gap-2` to prevent horizontal overflow on small screens
+
+## 2026-02-26 (Try mentor-style swipeable table pattern)
+
+- Pulled reference from `origin/review/manage-user` and applied the same ScrollArea-based table wrapper pattern on users page.
+- Added new UI primitive files:
+  - `app/components/ui/scroll-area/ScrollArea.vue`
+  - `app/components/ui/scroll-area/ScrollBar.vue`
+  - `app/components/ui/scroll-area/index.ts`
+- Updated `app/pages/users/index.vue` to wrap users table with `ScrollArea` while keeping responsive table width constraints.
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass; existing duplicate auto-import and sourcemap/deprecation warnings remain)
+
+## 2026-02-27 (Users page mobile responsiveness + WCAG improvements)
+
+- Improved `app/pages/users/index.vue` responsiveness for mobile/tablet/desktop:
+  - improved controls layout spacing and wrap behavior on small screens
+  - kept table swipe localized to table area via `ScrollArea` + table container overflow behavior
+- Improved accessibility and interaction support:
+  - added ARIA labels for search, filter trigger, create button, table region, and per-row action menu trigger
+  - added keyboard-focusable table scroll container (`tabindex="0"`) for keyboard horizontal scrolling
+  - improved contrast for low-emphasis text in filter sections
+- Improved mobile touch UX:
+  - increased primary control/action targets to at least 44px (`h-11`/`min-h-11`)
+  - enlarged filter checkboxes and touch rows
+  - enlarged pagination and row action triggers for thumb use
+- Re-applied mentor-style table scroll wrapper pattern without modifying base UI table components:
+  - added `app/components/ui/scroll-area/ScrollArea.vue`
+  - added `app/components/ui/scroll-area/ScrollBar.vue`
+  - added `app/components/ui/scroll-area/index.ts`
+  - wrapped users table with `ScrollArea` in `app/pages/users/index.vue`
+  - aligned users-page header/table wrapper styling closer to `origin/review/manage-user`
+  - final parity polish: header copy/casing and spacing/button classes adjusted to mentor style (`Manage user`, `Filter`, `+ New`, `Search`)
+  - fixed narrow-width header behavior so search stretches fluidly while keeping `Filter` and `+ New` in a single compact row (`<md`) and preventing clipping around tablet/mobile breakpoints
+  - tuned medium breakpoint layout (`md`) to prevent action clipping by reducing heading footprint and making controls area fluid with a bounded max width
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass; existing duplicate auto-import and Tailwind sourcemap/deprecation warnings remain)
+
+## 2026-02-27 (Users header medium-breakpoint wrap stabilization)
+
+- Updated `app/pages/users/index.vue` header layout so medium-width screens no longer compress title + controls into one crowded row.
+- Changed header container to wrap at medium sizes and keep single-row only on large (`lg`) screens.
+- Made the title consume its own row on `md` (`md:basis-full`) and kept controls full-width with bounded max width (`md:max-w-[560px]`).
+- Preserved compact one-row controls (`Search`, `Filter`, `+ New`) behavior and table swipe setup.
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass; existing duplicate auto-import and Tailwind sourcemap/deprecation warnings remain)
+
+## 2026-02-27 (Users controls stretch fix around 692px)
+
+- Fixed users header control row in `app/pages/users/index.vue` so `Search`, `Filter`, and `+ New` keep stretching with viewport width at medium sizes.
+- Updated controls wrapper breakpoint cap from `md:max-w-[560px]` to `md:max-w-none lg:max-w-[560px]`.
+- Result: no early width clamp at medium range; width cap now applies only on large desktop.
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass; existing duplicate auto-import and Tailwind sourcemap/deprecation warnings remain)
+
+## 2026-02-27 (Mobile header title alignment for users page)
+
+- Updated `app/layouts/default.vue` mobile top header title behavior.
+- Added `mobilePageTitle` computed mapping so users route shows `Manage Users` on mobile.
+- Center-aligned mobile header title using absolute center positioning while keeping menu button left and avatar right.
+- Kept desktop breadcrumb/title behavior unchanged.
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass; existing duplicate auto-import and Tailwind sourcemap/deprecation warnings remain)
+
+## 2026-02-27 (Users controls fluid width before desktop breakpoint)
+
+- Updated users page header responsive breakpoints in `app/pages/users/index.vue` to avoid medium-threshold layout jumps.
+- Changed page spacing breakpoint from `md` to `sm` (`p-4 sm:p-6 lg:p-8`) so width behavior remains stable through tablet widths.
+- Kept `Manage user` inline title hidden until desktop only (`lg:block`) to avoid non-desktop header reflow pressure.
+- Made controls row (`Search`, `Filter`, `+ New`) fluid up to desktop by moving alignment/cap rules to `lg` only:
+  - `lg:ml-auto`
+  - `lg:max-w-[560px]`
+- Delayed `+ New` horizontal padding increase to desktop only (`lg:px-6`) to prevent width jump in smaller layouts.
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass; existing duplicate auto-import and Tailwind sourcemap/deprecation warnings remain)
+
+## 2026-02-27 (Operation-style responsive headers for users and tools)
+
+- Refactored `app/pages/users/index.vue` header controls to mirror the stable operation-list flex pattern:
+  - replaced grid-based control row with flex-based row (`Search` grows, `Filter` and `+ New` stay shrink-0)
+  - preserved large-desktop cap/alignment (`lg:ml-auto lg:max-w-[560px]`)
+- Refactored `app/pages/tools/index.vue` header controls with the same pattern:
+  - removed nested/fragile header wrappers
+  - applied fluid control row (`Search` + `+ New`) with desktop cap (`lg:max-w-[460px]`)
+  - aligned spacing breakpoints to `p-4 sm:p-6 lg:p-8`
+  - improved search input accessibility (`aria-label`, `name`, `autocomplete`, explicit `h-10 w-full`)
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass; existing duplicate auto-import and Tailwind sourcemap/deprecation warnings remain)
+
+## 2026-02-27 (Users header regression analysis + width containment hardening)
+
+- Investigated why users mobile header appeared shifted/clipped while tools/operations looked correct.
+- Root-cause contributor identified in layout flex container sizing:
+  - `app/layouts/default.vue` main content column now includes `min-w-0` to prevent wide children from expanding layout width.
+- Simplified users table wrapper to reduce cross-component overflow interaction:
+  - removed `ScrollArea` wrapper usage in `app/pages/users/index.vue`
+  - switched to direct framed container + table min width (`min-w-[860px]`) for contained horizontal scrolling behavior
+- Kept users header controls aligned to operation/tools flex pattern (`Search` grows, action buttons shrink-0).
+- Verification:
+  - `npm run test` (pass)
+  - `npm run build` (pass; existing duplicate auto-import and Tailwind sourcemap/deprecation warnings remain)
+
+## 2026-02-27 (Execute checklist tabs alignment at 640px)
+
+- Updated checklist header layout in `app/pages/operations/[id]/execute.vue` for both editable and read-only modes.
+- Ensured `Tools` and `Operation` tab buttons stay in one line with `justify-between` from `sm` (640px) and above:
+  - editable section header uses `sm:flex-row sm:items-center sm:justify-between`
+  - read-only section header uses `sm:flex-row sm:items-center sm:justify-between`
+- Keeps stacked mobile layout below `sm`, and aligned single-line layout at/above `sm`.

@@ -1,5 +1,6 @@
 ﻿<script lang="ts" setup>
 import { computed, onMounted, ref, watch } from "vue";
+import { ArrowLeft } from "lucide-vue-next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DeleteConfimDialog from "@/components/DeleteConfimDialog.vue";
@@ -93,6 +94,10 @@ const isFooterFinishSaving = computed(
   () => submitting.value && activeSubmitSource.value === "footer-finish",
 );
 
+const goBack = async (): Promise<void> => {
+  await router.push("/operations");
+};
+
 onMounted(async () => {
   if (user.value?.roles !== "IM") {
     await router.push("/operations");
@@ -114,6 +119,15 @@ watch(
 <template>
   <div class="min-h-screen bg-gray-50">
     <div class="mx-auto p-4 sm:p-6 lg:p-8">
+      <div class="mb-6 flex items-center gap-3">
+        <Button variant="ghost" size="icon" @click="goBack">
+          <ArrowLeft class="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 class="text-xl font-semibold text-gray-900">{{ isEditing ? 'Edit Operation' : 'Create Operation' }}</h1>
+          <p class="text-sm text-gray-600">{{ isEditing ? 'Update operation details and checklist' : 'Fill in the details and build the checklist' }}</p>
+        </div>
+      </div>
       <Card class="mb-8 border border-gray-200 shadow-sm">
         <CardContent>
           <OperationFormCard

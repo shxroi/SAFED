@@ -18,7 +18,7 @@ interface UseOperationSaveOptions {
   undoDocumentationDelete: (taskId: number, docId: number) => void;
   removePendingDocumentation: (taskId: number, pendingId: string) => void;
   clearTaskDocumentationDraft: (taskId: number) => void;
-  fetchOperationDetail: () => Promise<void>;
+  fetchOperationDetail: (options?: { silent?: boolean }) => Promise<void>;
 }
 
 const extractErrorMessage = (error: unknown, fallback: string): string => {
@@ -122,7 +122,7 @@ export const useOperationSave = ({
         },
       });
       toast.success("Tools checklist saved successfully");
-      await fetchOperationDetail();
+      await fetchOperationDetail({ silent: true });
     } catch (err: unknown) {
       toast.error(extractErrorMessage(err, "Failed to save tools"));
     } finally {
@@ -180,7 +180,7 @@ export const useOperationSave = ({
       }
 
       clearTaskDocumentationDraft(activity.id);
-      await fetchOperationDetail();
+      await fetchOperationDetail({ silent: true });
       toast.success("Activity saved successfully");
     } catch (err: unknown) {
       toast.error(extractErrorMessage(err, "Failed to save activity"));

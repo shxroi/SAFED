@@ -1,19 +1,15 @@
-import { mkdir, unlink, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "../../../utils/baseDb";
+import { db } from "../../../../utils/baseDb";
 import {
   fieldDocumentations,
-  fieldReportNoteDocumentations,
-  fieldReportNotes,
   fieldReports,
   operationJobLists,
   operations,
   operationsEnroll,
   users,
-} from "../../../db/schema";
-import { buildFieldReportPdf } from "../../../utils/reportPdf";
+} from "../../../../db/schema";
+import { buildFieldReportPdf } from "../../../../utils/reportPdf";
 
 const reportPayloadSchema = z
   .object({
@@ -126,7 +122,7 @@ export default defineEventHandler(async (event) => {
     if (!supervisorEnrollment) {
       throw createError({
         statusCode: 403,
-        message: "Only supervisor can generate field report",
+        message: "Only supervisor can preview field report",
       });
     }
 
@@ -186,15 +182,13 @@ export default defineEventHandler(async (event) => {
     }
 
     const docsById = new Map(validDocs.map((doc) => [doc.id, doc]));
-    const generatedAt = new Date();
-
     const reportPdfBytes = await buildFieldReportPdf({
       operationId,
       operationTitle: operation.vesselName || operation.company,
       operationLocation: operation.location,
       operationDate: operation.date,
       supervisorName: supervisorEnrollment.supervisorName,
-      generatedAt,
+      generatedAt: new Date(),
       referenceNumber: payload.referenceNumber,
       serialNumber: payload.serialNumber,
       crewName: normalizedCrewName,
@@ -207,98 +201,20 @@ export default defineEventHandler(async (event) => {
       })),
     });
 
-    const fileKey = `field-report-${Date.now()}.pdf`;
-    const reportDir = join(
-      process.cwd(),
-      "public",
-      "uploads",
-      "operations",
-      String(operationId),
-      "reports",
+    setHeader(event, "Content-Type", "application/pdf");
+    setHeader(
+      event,
+      "Content-Disposition",
+      `inline; filename="field-report-preview-${operationId}.pdf"`,
     );
-    const diskPath = join(reportDir, fileKey);
-    const publicPath = `/uploads/operations/${operationId}/reports/${fileKey}`;
-
-    await mkdir(reportDir, { recursive: true });
-    await writeFile(diskPath, reportPdfBytes);
-
-    const reportResult = await db
-      .transaction(async (tx) => {
-        const [createdReport] = await tx
-          .insert(fieldReports)
-          .values({
-            operationId,
-            referenceNumber: payload.referenceNumber,
-            serialNumber: payload.serialNumber,
-            crewName: normalizedCrewName,
-            crewSignRequired: payload.crewSignRequired,
-            summary: "",
-            recommendation: "",
-            pdfPath: publicPath,
-            generatedBy: userId,
-            generatedAt,
-          })
-          .returning({ id: fieldReports.id });
-
-        if (!createdReport) {
-          throw createError({
-            statusCode: 500,
-            message: "Failed to create report",
-          });
-        }
-
-        const activeReportId = createdReport.id;
-
-        for (const note of normalizedNotes) {
-          const [insertedNote] = await tx
-            .insert(fieldReportNotes)
-            .values({
-              reportId: activeReportId,
-              note: note.note,
-            })
-            .returning({ id: fieldReportNotes.id });
-
-          if (!insertedNote) {
-            throw createError({
-              statusCode: 500,
-              message: "Failed to create report note",
-            });
-          }
-
-          if (note.documentationIds.length > 0) {
-            await tx.insert(fieldReportNoteDocumentations).values(
-              note.documentationIds.map((documentationId) => ({
-                noteId: insertedNote.id,
-                documentationId,
-              })),
-            );
-          }
-        }
-
-        return {
-          reportId: activeReportId,
-        };
-      })
-      .catch(async (transactionError) => {
-        await unlink(diskPath).catch(() => undefined);
-        throw transactionError;
-      });
-
-    return {
-      success: true,
-      report: {
-        id: reportResult.reportId,
-        pdfPath: publicPath,
-      },
-      message: "Field report generated successfully",
-    };
+    return reportPdfBytes;
   } catch (error: any) {
     if (error.statusCode) throw error;
 
-    console.error("Error generating field report:", error);
+    console.error("Error previewing field report:", error);
     throw createError({
       statusCode: 500,
-      message: error.message || "Failed to generate field report",
+      message: error.message || "Failed to preview field report",
     });
   }
 });

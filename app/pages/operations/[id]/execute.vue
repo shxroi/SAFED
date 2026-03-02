@@ -5,6 +5,7 @@ import {
   Building2,
   ChevronDown,
   Download,
+  FileText,
   MapPin,
   Users,
 } from "lucide-vue-next";
@@ -21,7 +22,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -151,8 +158,10 @@ const handleDocumentationFiles = async (
     return;
   }
 
-  const { addedCount, skippedCount, skippedNonImage } =
-    addPendingDocumentation(activity, files);
+  const { addedCount, skippedCount, skippedNonImage } = addPendingDocumentation(
+    activity,
+    files,
+  );
 
   if (addedCount === 0) {
     toast.error("Please select image files");
@@ -178,22 +187,47 @@ const operationTitle = computed(() => {
   return operation.value.vesselName || operation.value.company;
 });
 
+const canOpenReportPage = computed(
+  () => isSupervisor.value || Boolean(operation.value?.reportPdfPath),
+);
+
+const reportPrimaryLabel = computed(() => {
+  if (isSupervisor.value && !operation.value?.reportPdfPath) {
+    return "Field Report";
+  }
+  return "Review";
+});
+
 const goBack = async (): Promise<void> => {
   await navigateTo("/operations");
 };
 
 const openReportPage = async (): Promise<void> => {
-  if (Number.isNaN(operationId.value) || operationId.value < 1) return;
-  await navigateTo(`/operations/${operationId.value}/report`);
+  if (isSupervisor.value && !operation.value?.reportPdfPath) {
+    await navigateTo(`/operations/${operationId.value}/report`);
+    return;
+  }
+
+  const path = operation.value?.reportPdfPath;
+  if (!path) {
+    toast.error("Field report is not generated yet");
+    return;
+  }
+  window.open(path, "_blank", "noopener,noreferrer");
 };
 
 const openReportPdf = (): void => {
   const path = operation.value?.reportPdfPath;
   if (!path) {
-    toast.error("Field report PDF is not available yet");
+    toast.error("Field report is not generated yet");
     return;
   }
-  window.open(path, "_blank", "noopener,noreferrer");
+  const link = document.createElement("a");
+  link.href = path;
+  link.download = `field-report-${operationId.value}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
 
 onMounted(async () => {
@@ -220,28 +254,21 @@ onMounted(async () => {
 
 <template>
   <div class="min-h-screen bg-gray-50 pb-36 md:pb-24">
-    <div class="bg-white border-b border-gray-200 sticky top-0 z-10">
-      <div class="mx-auto max-w-7xl px-4 py-4">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              @click="goBack"
-              v-if="!isReadOnly"
-            >
-              <ArrowLeft class="h-5 w-5" />
-            </Button>
-            <div v-else class="flex items-center gap-2">
-              <span class="font-bold text-lg">Manage Operations</span>
-            </div>
-            <h1 class="text-lg font-semibold text-gray-900" v-if="!isReadOnly">
-              Operations
+    <div class="px-4 md:px-6 lg:px-8 mt-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center">
+          <Button variant="ghost" size="icon" @click="goBack">
+            <ArrowLeft class="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 class="text-xl font-semibold text-gray-900">
+              Execute Operation
             </h1>
-            <Badge v-if="isReadOnly" variant="secondary" class="gap-1 ml-2">
-              {{ user?.username || "User" }}
-            </Badge>
+            <p class="text-sm text-gray-600">{{ operationTitle }}</p>
           </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <Badge variant="secondary" class="bg-green-300">{{ operation?.status || "-" }}</Badge>
         </div>
       </div>
     </div>
@@ -252,8 +279,11 @@ onMounted(async () => {
       ></div>
     </div>
 
-    <div v-else-if="operation && !isReadOnly" class="mx-auto max-w-7xl p-4 md:p-6 lg:p-8">
-      <OperationInfoCard
+    <div
+      v-else-if="operation && !isReadOnly"
+      class="mx-auto max-w-7xl px-4 pt-2 pb-8 sm:px-6 md:pt-3 lg:px-8"
+    >
+      <OperationInfoCard  
         :operation="operation"
         :progress="calculateProgress"
         :days-left="operationDaysLeft"
@@ -264,10 +294,12 @@ onMounted(async () => {
       <Card class="border border-gray-200 shadow-sm mb-6">
         <CardContent class="p-0">
           <div
-            class="flex flex-col gap-3 border-b border-gray-200 p-4 sm:flex-row sm:items-center sm:justify-between"
+            class="flex gap-3 border-b border-gray-200 p-4 flex-row items-center justify-between"
           >
             <h3 class="font-semibold text-gray-900">Checklist</h3>
-            <div class="grid grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1">
+            <div
+              class="grid w-fit grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1"
+            >
               <Button
                 variant="ghost"
                 size="sm"
@@ -320,7 +352,12 @@ onMounted(async () => {
               :uploading-by-task="uploadingByTask"
               @set-status="
                 (sectionIndex, moduleIndex, activityIndex, status) =>
-                  setActivityStatus(sectionIndex, moduleIndex, activityIndex, status)
+                  setActivityStatus(
+                    sectionIndex,
+                    moduleIndex,
+                    activityIndex,
+                    status,
+                  )
               "
               @update-notes="(activity, value) => (activity.notes = value)"
               @add-documentation="
@@ -345,100 +382,125 @@ onMounted(async () => {
               @save="(activity) => saveActivity(activity)"
             />
           </div>
+
+          <div
+            v-if="isSupervisor"
+            class="border-t border-gray-200 pt-4 pr-4 flex justify-end"
+          >
+            <Button
+              class="h-10 px-6 bg-gray-200 text-slate hover:bg-gray-100"
+              :disabled="operation.status === 'Complete'"
+              @click="showFinishDialog = true"
+            >
+              Finish Operation
+            </Button>
+          </div>
         </CardContent>
       </Card>
-
-      <div
-        v-if="isSupervisor"
-        class="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white p-4 md:left-64"
-      >
-        <Button
-          variant="outline"
-          class="mx-auto h-12 w-full max-w-7xl border-slate-900 text-slate-900 hover:bg-slate-50"
-          :disabled="operation.status === 'Complete'"
-          @click="showFinishDialog = true"
-        >
-          Finish Operation
-        </Button>
-      </div>
     </div>
 
-    <div v-else-if="operation && isReadOnly" class="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
-      <div class="grid grid-cols-1 gap-6 lg:gap-8">
-        <div class="col-span-12">
-          <Card class="mb-6">
-            <CardHeader class="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-              <div class="flex items-center gap-2">
-                <CardTitle class="text-base font-medium"
-                  >{{ operation.type }} - {{ operationTitle }}</CardTitle
-                >
-              </div>
-              <div class="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  class="gap-2"
-                  @click="openReportPage"
-                >
-                  Field Report
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  class="gap-2"
-                  :disabled="!operation.reportPdfPath"
-                  @click="openReportPdf"
-                >
-                  <Download class="h-4 w-4" />
-                  PDF
-                </Button>
-              </div>
+    <div
+      v-else-if="operation && isReadOnly"
+      class="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8"
+    >
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-start lg:gap-6">
+        <div class="lg:col-span-3">
+          <Card class="border border-gray-200 shadow-sm">
+            <CardHeader class="pb-2">
+              <CardTitle class="text-sm font-semibold text-gray-900">Report</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-8">
-                <div class="space-y-3 text-sm">
-                  <div class="flex gap-2">
-                    <MapPin class="w-4 h-4 text-gray-400" />
+            <CardContent class="space-y-2 pt-0">
+              <button
+                type="button"
+                class="flex w-full items-center gap-2 rounded-md border border-gray-200 bg-slate-100 px-2.5 py-2 text-left text-xs text-slate-700 transition-colors hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                :disabled="!canOpenReportPage"
+                @click="openReportPage"
+              >
+                <FileText class="h-3.5 w-3.5 shrink-0" />
+                <span class="min-w-0 flex-1 truncate"
+                  >{{ operation.type }} - {{ operationTitle }}</span
+                >
+                <Download class="h-3.5 w-3.5 shrink-0" />
+              </button>
+            </CardContent>
+            <CardFooter class="grid grid-cols-2 gap-1.5 pt-0">
+              <Button
+                variant="outline"
+                size="sm"
+                class="h-8 w-full bg-gray-100 text-xs font-semibold hover:bg-gray-200"
+                :disabled="!canOpenReportPage"
+                @click="openReportPage"
+              >
+                {{ reportPrimaryLabel }}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                class="h-8 w-full gap-1.5 text-xs font-semibold"
+                :disabled="!operation.reportPdfPath"
+                @click="openReportPdf"
+              >
+                <Download class="h-3.5 w-3.5" />
+                Download
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+
+        <div class="lg:col-span-9">
+          <Card class="border border-gray-200 shadow-sm">
+            <CardHeader>
+              <CardTitle class="text-base font-semibold"
+                >{{ operation.type }} - {{ operationTitle }}</CardTitle
+              >
+            </CardHeader>
+            <CardContent class="pt-0">
+              <div class="mb-2 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-6">
+                <div class="space-y-2.5 text-sm">
+                  <div class="flex items-center gap-2">
+                    <MapPin class="h-4 w-4 text-gray-400" />
                     <span
                       >{{ operation.location }},
                       {{ formatDate(operation.date) }}</span
                     >
                   </div>
-                  <div class="flex gap-2">
-                    <Building2 class="w-4 h-4 text-gray-400" />
+                  <div class="flex items-center gap-2">
+                    <Building2 class="h-4 w-4 text-gray-400" />
                     <span>{{ operation.company }}</span>
                   </div>
                 </div>
-                <div class="space-y-3 text-sm">
-                  <div class="flex gap-2">
-                    <Users class="w-4 h-4 text-gray-400" />
+                <div class="space-y-2.5 text-sm">
+                  <div class="flex items-center gap-2">
+                    <Users class="h-4 w-4 text-gray-400" />
                     <span>{{ operation.supervisorName }}</span>
                   </div>
-                  <div class="flex gap-2">
-                    <Users class="w-4 h-4 text-gray-400" />
+                  <div class="flex items-center gap-2">
+                    <Users class="h-4 w-4 text-gray-400" />
                     <span>{{ operation.staffNames?.join(", ") }}</span>
                   </div>
                 </div>
               </div>
 
-              <div class="space-y-2">
-                <div class="flex justify-between text-sm font-medium">
+              <div class="space-y-1.5">
+                <div class="flex justify-between text-sm font-semibold">
                   <span>Progress</span>
                   <span>{{ calculateProgress }}%</span>
                 </div>
                 <Progress
                   :model-value="calculateProgress"
-                  class="h-2 bg-slate-100"
+                  class="h-1.5 bg-slate-100"
                 />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <div class="col-span-12">
-          <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="col-span-full">
+          <div
+            class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+          >
             <h2 class="text-xl font-bold">Checklist</h2>
-            <div class="bg-gray-100 p-1 rounded-lg inline-flex"> 
+            <div class="inline-flex w-fit rounded-lg bg-gray-100 p-1">
               <Button
                 variant="ghost"
                 size="sm"

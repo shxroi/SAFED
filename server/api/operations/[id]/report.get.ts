@@ -79,10 +79,6 @@ export default defineEventHandler(async (event) => {
       )
       .limit(1);
 
-    const canGenerate =
-      userEnrollment?.operationRole === "SUPERVISOR" &&
-      operation.status === "Complete";
-
     const [report] = await db
       .select({
         id: fieldReports.id,
@@ -96,6 +92,11 @@ export default defineEventHandler(async (event) => {
       .from(fieldReports)
       .where(eq(fieldReports.operationId, operationId))
       .limit(1);
+
+    const canGenerate =
+      userEnrollment?.operationRole === "SUPERVISOR" &&
+      operation.status === "Complete" &&
+      !report;
 
     const availableDocumentations = await db
       .select({

@@ -2,7 +2,10 @@
 import { computed, ref, watch } from "vue";
 import { ChevronDown, Filter, Plus, Search } from "lucide-vue-next";
 import { type DateValue, parseDate } from "@internationalized/date";
-import type { OperationStatus, OperationType } from "../../../shared/types/operation";
+import type {
+  OperationStatus,
+  OperationType,
+} from "../../../shared/types/operation";
 import {
   OPERATION_STATUS_OPTIONS,
   OPERATION_TYPE_OPTIONS,
@@ -62,15 +65,13 @@ watch(open, (isOpen) => {
 
 const selectedTypeItems = computed(() =>
   draftTypes.value
-    .map(
-      (type) => {
-        const option = OPERATION_TYPE_OPTIONS.find((item) => item.value === type);
-        return {
-          value: type,
-          label: option?.label || type,
-        };
-      },
-    )
+    .map((type) => {
+      const option = OPERATION_TYPE_OPTIONS.find((item) => item.value === type);
+      return {
+        value: type,
+        label: option?.label || type,
+      };
+    })
     .filter(Boolean),
 );
 
@@ -128,22 +129,22 @@ const removeType = (type: OperationType): void => {
 </script>
 
 <template>
-  <div
-    class="mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center"
-  >
-    <h1 class="text-2xl font-bold tracking-tight text-slate-900">
+  <div class="mb-8 flex items-center justify-between gap-3">
+    <h1
+      class="hidden text-2xl font-bold tracking-tight text-slate-900 md:block"
+    >
       Operation List
     </h1>
 
-    <div class="flex w-full flex-wrap items-center gap-3 md:w-auto md:justify-end">
-      <div class="relative w-full sm:w-80">
+    <div class="flex flex-1 items-center justify-end gap-2">
+      <div class="relative flex-1 min-w-0 max-w-xs">
         <Search
           class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
         />
         <Input
           :model-value="props.search"
           placeholder="Search operations..."
-          class="rounded-md border-gray-300 pl-10 focus-visible:ring-gray-400"
+          class="rounded-md border-gray-300 bg-white pl-10 focus-visible:ring-gray-400"
           aria-label="Search operations"
           @update:model-value="
             (value) => emit('update:search', String(value || ''))
@@ -155,16 +156,15 @@ const removeType = (type: OperationType): void => {
         <PopoverTrigger as-child>
           <Button
             variant="outline"
-            class="relative w-full gap-2 sm:w-auto"
+            class="relative h-10 shrink-0 gap-2 rounded-md border-gray-300 px-3 text-gray-600 font-normal"
             aria-label="Open operation filters"
             :aria-expanded="open"
           >
-            <Filter class="h-4 w-4" />
+            <Filter class="h-4 w-4 text-gray-500 " />
             Filter
-            <ChevronDown class="h-3.5 w-3.5 text-gray-400" />
             <span
               v-if="activeFilterCount > 0"
-              class="absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-slate-900 px-1 text-[10px] font-semibold text-white"
+              class="absolute -right-1.5 -top-1.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-slate-900 px-1 text-[10px] font-semibold text-white"
             >
               {{ activeFilterCount }}
             </span>
@@ -216,10 +216,15 @@ const removeType = (type: OperationType): void => {
                     class="h-auto min-h-9 w-full justify-between"
                     aria-label="Select operation type"
                   >
-                    <span v-if="selectedTypeItems.length === 0" class="text-xs text-slate-500"
+                    <span
+                      v-if="selectedTypeItems.length === 0"
+                      class="text-xs text-slate-500"
                       >Choose type</span
                     >
-                    <div v-else class="flex min-w-0 flex-1 flex-wrap gap-1 pr-2">
+                    <div
+                      v-else
+                      class="flex min-w-0 flex-1 flex-wrap gap-1 pr-2"
+                    >
                       <Badge
                         v-for="type in selectedTypeItems"
                         :key="type.value"
@@ -233,7 +238,7 @@ const removeType = (type: OperationType): void => {
                   </Button>
                 </PopoverTrigger>
 
-                <PopoverContent class="w-[220px] p-0" align="start">
+                <PopoverContent class="w-55 p-0" align="start">
                   <Command>
                     <CommandInput placeholder="Search type..." class="h-9" />
                     <CommandList>
@@ -260,8 +265,6 @@ const removeType = (type: OperationType): void => {
                   </Command>
                 </PopoverContent>
               </Popover>
-
-              
             </div>
 
             <div class="space-y-2">
@@ -295,7 +298,7 @@ const removeType = (type: OperationType): void => {
 
       <Button
         v-if="props.isIM"
-        class="w-full gap-2 sm:w-auto"
+        class="shrink-0 gap-2"
         aria-label="Create new operation"
         @click="emit('create')"
       >
