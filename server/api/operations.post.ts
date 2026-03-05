@@ -1,6 +1,7 @@
 import { db } from '../utils/baseDb'
 import { operations, operationsEnroll } from '../db/schema'
 import { OPERATION_TYPES } from '../../shared/types/operation'
+import { notifyOperationDetailSaved } from '../services/operation-notification'
 
 type SessionUser = {
   id?: number | string
@@ -111,6 +112,15 @@ export default defineEventHandler(async (event) => {
 
       return created
     })
+
+    try {
+      await notifyOperationDetailSaved({
+        operationId: newOperation.id,
+        action: 'created',
+      })
+    } catch (notificationError) {
+      console.error('Failed to send operation created notification:', notificationError)
+    }
 
     return {
       success: true,

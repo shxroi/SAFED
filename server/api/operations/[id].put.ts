@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '../../utils/baseDb'
 import { operations, operationsEnroll } from '../../db/schema'
 import { OPERATION_TYPES } from '../../../shared/types/operation'
+import { notifyOperationDetailSaved } from '../../services/operation-notification'
 
 type SessionUser = {
   id?: number | string
@@ -26,6 +27,15 @@ const normalizeId = (value: number | string | null | undefined): number | null =
   if (Number.isNaN(parsed) || parsed < 1) return null
 
   return parsed
+}
+
+const areIdSetsEqual = (first: number[], second: number[]): boolean => {
+  if (first.length !== second.length) return false
+
+  const normalizedFirst = [...first].sort((a, b) => a - b)
+  const normalizedSecond = [...second].sort((a, b) => a - b)
+
+  return normalizedFirst.every((value, index) => value === normalizedSecond[index])
 }
 
 export default defineEventHandler(async (event) => {
@@ -81,7 +91,7 @@ export default defineEventHandler(async (event) => {
 
     const filteredStaffIds = supervisorId ? staffIds.filter((staffId) => staffId !== supervisorId) : staffIds
 
-    const updatedOperation = await db.transaction(async (tx) => {
+    const updateResult = await db.transaction(async (tx) => {
       const [existingOperation] = await tx
         .select()
         .from(operations)
@@ -90,6 +100,14 @@ export default defineEventHandler(async (event) => {
       if (!existingOperation) {
         throw createError({ statusCode: 404, message: 'Operation not found' })
       }
+
+      const previousEnrollments = await tx
+        .select({
+          userId: operationsEnroll.userId,
+          operationRole: operationsEnroll.operationRole,
+        })
+        .from(operationsEnroll)
+        .where(eq(operationsEnroll.operationId, id))
 
       const [updated] = await tx
         .update(operations)
@@ -124,8 +142,62 @@ export default defineEventHandler(async (event) => {
         await tx.insert(operationsEnroll).values(enrollments)
       }
 
-      return updated
+      return {
+        updated,
+        existingOperation,
+        previousEnrollments,
+      }
     })
+
+    const { updated: updatedOperation, existingOperation, previousEnrollments } = updateResult
+
+    const changedFields: string[] = []
+
+    if (existingOperation.company !== updatedOperation.company) {
+      changedFields.push('Company')
+    }
+
+    if (existingOperation.type !== updatedOperation.type) {
+      changedFields.push('Operation Type')
+    }
+
+    if ((existingOperation.vesselName || '') !== (updatedOperation.vesselName || '')) {
+      changedFields.push('Vessel Name')
+    }
+
+    if (existingOperation.location !== updatedOperation.location) {
+      changedFields.push('Location')
+    }
+
+    if (existingOperation.date.getTime() !== updatedOperation.date.getTime()) {
+      changedFields.push('Date')
+    }
+
+    const previousSupervisorId = previousEnrollments.find((item) => item.operationRole === 'SUPERVISOR')?.userId || null
+
+    if (previousSupervisorId !== supervisorId) {
+      changedFields.push('Supervisor')
+    }
+
+    const previousStaffIds = previousEnrollments
+      .filter((item) => item.operationRole === 'STAFF')
+      .map((item) => item.userId)
+
+    if (!areIdSetsEqual(previousStaffIds, filteredStaffIds)) {
+      changedFields.push('Assigned Staff')
+    }
+
+    if (changedFields.length > 0) {
+      try {
+        await notifyOperationDetailSaved({
+          operationId: updatedOperation.id,
+          action: 'updated',
+          changedFields,
+        })
+      } catch (notificationError) {
+        console.error('Failed to send operation updated notification:', notificationError)
+      }
+    }
 
     return {
       success: true,

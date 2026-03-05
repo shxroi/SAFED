@@ -33,6 +33,16 @@ export default defineNuxtConfig({
   hub: {
     db: 'postgresql'
   },
+  runtimeConfig: {
+    mailEnabled: process.env.MAIL_ENABLED ?? 'false',
+    smtpHost: process.env.SMTP_HOST,
+    smtpPort: process.env.SMTP_PORT,
+    smtpSecure: process.env.SMTP_SECURE ?? 'false',
+    smtpUser: process.env.SMTP_USER,
+    smtpPass: process.env.SMTP_PASS,
+    mailFrom: process.env.MAIL_FROM,
+    appBaseUrl: process.env.APP_BASE_URL,
+  },
   vite: {
     plugins: [
       tailwindcss(),
